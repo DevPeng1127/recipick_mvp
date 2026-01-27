@@ -1,0 +1,13 @@
+### 1. 식재료 등록 (계란)
+POST http://localhost:8080/api/v1/ingredients
+Content-Type: application/json
+
+{
+  "name": "계란",
+  "expiryDate": "2026-02-10",
+  "storageType": "FRIDGE",
+  "quantity": 10
+}
+
+### 2. 냉장고 전체 조회
+GET http://localhost:8080/api/v1/ingredients

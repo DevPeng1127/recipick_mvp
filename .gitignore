@@ -1,0 +1,19 @@
+# Java
+target/
+*.class
+.gradle/
+build/
+
+# Node
+node_modules/
+dist/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+.vscode/

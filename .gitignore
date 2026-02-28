@@ -1,13 +1,23 @@
-# Java
-target/
-*.class
-.gradle/
-build/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.venv/
+venv/
+env/
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+*.cover
 
 # Node
 node_modules/
 dist/
 .env
+.env.local
 
 # OS
 .DS_Store
@@ -17,3 +27,6 @@ Thumbs.db
 .idea/
 *.iml
 .vscode/
+
+# Alembic
+alembic/versions/*.pyc

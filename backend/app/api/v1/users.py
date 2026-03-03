@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
-from app.schemas.user import UserPreferenceResponse, UserPreferenceUpdate, UserResponse
-from app.services.user_service import get_user_preference, upsert_user_preference
+from app.schemas.user import UserPreferenceResponse, UserPreferenceUpdate, UserResponse, UserUpdate
+from app.services.user_service import get_user_preference, update_user, upsert_user_preference
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -13,6 +13,15 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await update_user(current_user, data, db)
 
 
 @router.get("/me/preference", response_model=UserPreferenceResponse | None)

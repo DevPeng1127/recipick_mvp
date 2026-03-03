@@ -35,6 +35,7 @@ async def create_ingredient(
         storage_box_id=storage_box_id,
         name=data.name,
         quantity=data.quantity,
+        unit=data.unit,
         expiry_date=data.expiry_date,
     )
     db.add(ingredient)

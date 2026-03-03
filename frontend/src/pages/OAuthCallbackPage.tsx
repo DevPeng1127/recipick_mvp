@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
+import { getMyPreference } from '../api/users'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 
 export default function OAuthCallbackPage() {
@@ -9,8 +10,12 @@ export default function OAuthCallbackPage() {
   const navigate = useNavigate()
   const { login } = useAuthStore()
   const [error, setError] = useState<string | null>(null)
+  const hasRun = useRef(false)
 
   useEffect(() => {
+    if (hasRun.current) return
+    hasRun.current = true
+
     const code = searchParams.get('code')
     if (!provider || !code) {
       setError('잘못된 콜백 요청입니다.')
@@ -18,7 +23,14 @@ export default function OAuthCallbackPage() {
     }
 
     login(provider, code)
-      .then(() => navigate('/dashboard', { replace: true }))
+      .then(async () => {
+        const pref = await getMyPreference()
+        if (pref === null) {
+          navigate('/onboarding', { replace: true })
+        } else {
+          navigate('/dashboard', { replace: true })
+        }
+      })
       .catch(() => setError('로그인에 실패했습니다.'))
   }, [provider, searchParams, login, navigate])
 

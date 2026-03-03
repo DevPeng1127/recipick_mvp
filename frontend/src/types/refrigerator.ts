@@ -13,6 +13,7 @@ export interface Refrigerator {
   id: number
   name: string
   created_at: string
+  storage_boxes?: StorageBox[]
 }
 
 export interface RefrigeratorDetail extends Refrigerator {

@@ -5,9 +5,10 @@ import IngredientCard from './IngredientCard'
 interface IngredientListProps {
   ingredients: Ingredient[]
   onDelete: (id: number) => void
+  onEdit?: (ingredient: Ingredient) => void
 }
 
-export default function IngredientList({ ingredients, onDelete }: IngredientListProps) {
+export default function IngredientList({ ingredients, onDelete, onEdit }: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
       <EmptyState
@@ -25,6 +26,7 @@ export default function IngredientList({ ingredients, onDelete }: IngredientList
           key={ingredient.id}
           ingredient={ingredient}
           onDelete={onDelete}
+          onEdit={onEdit}
         />
       ))}
     </div>

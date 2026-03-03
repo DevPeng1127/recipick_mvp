@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { oauthCallback } from '../api/auth'
-import { getMe, type UserResponse } from '../api/users'
+import { getMe, updateMe, type UserResponse } from '../api/users'
 
 interface AuthState {
   user: UserResponse | null
@@ -10,6 +10,7 @@ interface AuthState {
   logout: () => void
   fetchUser: () => Promise<void>
   initialize: () => Promise<void>
+  updateNickname: (nickname: string) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -53,5 +54,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ user: null, isAuthenticated: false, isLoading: false })
       }
     }
+  },
+
+  updateNickname: async (nickname: string) => {
+    const updated = await updateMe({ nickname })
+    set({ user: updated })
   },
 }))

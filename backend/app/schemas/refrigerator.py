@@ -30,6 +30,15 @@ class RefrigeratorResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RefrigeratorListResponse(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    storage_boxes: list["StorageBoxResponse"] = []
+
+    model_config = {"from_attributes": True}
+
+
 class RefrigeratorDetailResponse(BaseModel):
     id: int
     name: str
@@ -42,4 +51,5 @@ class RefrigeratorDetailResponse(BaseModel):
 
 from app.schemas.storage import StorageBoxResponse  # noqa: E402
 
+RefrigeratorListResponse.model_rebuild()
 RefrigeratorDetailResponse.model_rebuild()

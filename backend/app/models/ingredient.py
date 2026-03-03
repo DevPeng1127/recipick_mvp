@@ -15,6 +15,7 @@ class Ingredient(Base):
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    unit: Mapped[str] = mapped_column(String(20), nullable=False, default="개")
     expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     storage_box: Mapped["StorageBox"] = relationship(back_populates="ingredients")

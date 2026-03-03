@@ -11,8 +11,9 @@ async def list_refrigerators(user_id: int, db: AsyncSession) -> list[Refrigerato
         select(Refrigerator)
         .join(RefrigeratorMember)
         .where(RefrigeratorMember.user_id == user_id)
+        .options(selectinload(Refrigerator.storage_boxes))
     )
-    return list(result.scalars().all())
+    return list(result.unique().scalars().all())
 
 
 async def create_refrigerator(

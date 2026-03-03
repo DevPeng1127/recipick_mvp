@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CookingSkill, UserPreferenceUpdate } from '../api/users'
+import { useAuthStore } from '../stores/useAuthStore'
 import { usePreferenceStore } from '../stores/usePreferenceStore'
 import SkillLevelSelector from '../components/preference/SkillLevelSelector'
 import AllergyTagInput from '../components/preference/AllergyTagInput'
@@ -7,7 +8,10 @@ import CookingToolSelector from '../components/preference/CookingToolSelector'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 
+const NICKNAME_REGEX = /^[가-힣a-zA-Z0-9\-_()]+$/
+
 export default function PreferencePage() {
+  const { user, updateNickname } = useAuthStore()
   const { preference, isLoading, error, fetchPreference, savePreference } =
     usePreferenceStore()
 
@@ -18,6 +22,11 @@ export default function PreferencePage() {
     cooking_tools: [],
     dietary_habits: '',
   })
+
+  // Nickname editing state
+  const [isEditingNickname, setIsEditingNickname] = useState(false)
+  const [nicknameInput, setNicknameInput] = useState('')
+  const [nicknameError, setNicknameError] = useState('')
 
   useEffect(() => {
     fetchPreference()
@@ -35,6 +44,30 @@ export default function PreferencePage() {
     }
   }, [preference])
 
+  const startEditNickname = () => {
+    setNicknameInput(user?.nickname ?? '')
+    setNicknameError('')
+    setIsEditingNickname(true)
+  }
+
+  const saveNickname = async () => {
+    const v = nicknameInput.trim()
+    if (!v) {
+      setNicknameError('닉네임을 입력해주세요')
+      return
+    }
+    if (v.length > 20) {
+      setNicknameError('닉네임은 1~20자 사이여야 합니다')
+      return
+    }
+    if (!NICKNAME_REGEX.test(v)) {
+      setNicknameError('한글, 영문, 숫자, -, _, () 만 가능합니다')
+      return
+    }
+    await updateNickname(v)
+    setIsEditingNickname(false)
+  }
+
   const handleSave = async () => {
     await savePreference(form)
     alert('설정이 저장되었습니다.')
@@ -49,6 +82,52 @@ export default function PreferencePage() {
       {error && <ErrorMessage message={error} />}
 
       <div className="space-y-8">
+        <section>
+          <h2 className="text-lg font-medium text-gray-700 mb-3">닉네임</h2>
+          {isEditingNickname ? (
+            <div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={nicknameInput}
+                  onChange={(e) => {
+                    setNicknameInput(e.target.value)
+                    if (nicknameError) setNicknameError('')
+                  }}
+                  maxLength={20}
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  autoFocus
+                />
+                <button
+                  onClick={saveNickname}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  저장
+                </button>
+                <button
+                  onClick={() => setIsEditingNickname(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50"
+                >
+                  취소
+                </button>
+              </div>
+              {nicknameError && (
+                <p className="text-red-500 text-sm mt-1">{nicknameError}</p>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="text-gray-800">{user?.nickname}</span>
+              <button
+                onClick={startEditNickname}
+                className="text-sm text-purple-600 hover:underline"
+              >
+                수정
+              </button>
+            </div>
+          )}
+        </section>
+
         <section>
           <h2 className="text-lg font-medium text-gray-700 mb-3">요리 실력</h2>
           <SkillLevelSelector

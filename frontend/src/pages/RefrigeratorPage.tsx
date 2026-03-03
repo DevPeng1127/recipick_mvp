@@ -4,11 +4,12 @@ import { useRefrigeratorStore } from '../stores/useRefrigeratorStore'
 import { useStorageBoxStore } from '../stores/useStorageBoxStore'
 import StorageBoxCard from '../components/storage/StorageBoxCard'
 import CreateStorageBoxModal from '../components/storage/CreateStorageBoxModal'
+import EditStorageBoxModal from '../components/storage/EditStorageBoxModal'
+import ConfirmDialog from '../components/common/ConfirmDialog'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import EmptyState from '../components/common/EmptyState'
-import ConfirmDialog from '../components/common/ConfirmDialog'
-import type { StorageType } from '../types/storage'
+import type { StorageBox, StorageType } from '../types/storage'
 
 export default function RefrigeratorPage() {
   const { id } = useParams<{ id: string }>()
@@ -28,10 +29,14 @@ export default function RefrigeratorPage() {
     isLoading: boxLoading,
     fetchStorageBoxes,
     addStorageBox,
+    editStorageBox,
+    removeStorageBox,
   } = useStorageBoxStore()
 
   const [showCreateBox, setShowCreateBox] = useState(false)
-  const [showDelete, setShowDelete] = useState(false)
+  const [showDeleteFridge, setShowDeleteFridge] = useState(false)
+  const [editBoxTarget, setEditBoxTarget] = useState<StorageBox | null>(null)
+  const [deleteBoxTarget, setDeleteBoxTarget] = useState<StorageBox | null>(null)
 
   useEffect(() => {
     fetchRefrigeratorDetail(refrigeratorId)
@@ -63,7 +68,7 @@ export default function RefrigeratorPage() {
             보관함 추가
           </button>
           <button
-            onClick={() => setShowDelete(true)}
+            onClick={() => setShowDeleteFridge(true)}
             className="px-4 py-2 border border-red-300 text-red-500 rounded-lg hover:bg-red-50"
           >
             삭제
@@ -80,7 +85,12 @@ export default function RefrigeratorPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {storageBoxes.map((box) => (
-            <StorageBoxCard key={box.id} storageBox={box} />
+            <StorageBoxCard
+              key={box.id}
+              storageBox={box}
+              onEdit={() => setEditBoxTarget(box)}
+              onDelete={() => setDeleteBoxTarget(box)}
+            />
           ))}
         </div>
       )}
@@ -93,9 +103,33 @@ export default function RefrigeratorPage() {
         }}
       />
 
+      <EditStorageBoxModal
+        isOpen={!!editBoxTarget}
+        onClose={() => setEditBoxTarget(null)}
+        storageBox={editBoxTarget}
+        onSave={async (data) => {
+          if (editBoxTarget) {
+            await editStorageBox(refrigeratorId, editBoxTarget.id, data)
+          }
+        }}
+      />
+
       <ConfirmDialog
-        isOpen={showDelete}
-        onClose={() => setShowDelete(false)}
+        isOpen={!!deleteBoxTarget}
+        onClose={() => setDeleteBoxTarget(null)}
+        onConfirm={async () => {
+          if (deleteBoxTarget) {
+            await removeStorageBox(refrigeratorId, deleteBoxTarget.id)
+          }
+        }}
+        title="보관함 삭제"
+        message="이 보관함과 모든 식재료가 삭제됩니다. 계속하시겠습니까?"
+        confirmText="삭제"
+      />
+
+      <ConfirmDialog
+        isOpen={showDeleteFridge}
+        onClose={() => setShowDeleteFridge(false)}
         onConfirm={async () => {
           await removeRefrigerator(refrigeratorId)
           navigate('/dashboard')

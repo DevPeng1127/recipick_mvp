@@ -2,7 +2,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User, UserPreference
-from app.schemas.user import UserPreferenceUpdate
+from app.schemas.user import UserPreferenceUpdate, UserUpdate
+
+
+async def update_user(user: User, data: UserUpdate, db: AsyncSession) -> User:
+    user.nickname = data.nickname
+    await db.flush()
+    return user
 
 
 async def get_user_preference(user_id: int, db: AsyncSession) -> UserPreference | None:

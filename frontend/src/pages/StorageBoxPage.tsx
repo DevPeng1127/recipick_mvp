@@ -1,10 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useIngredientStore } from '../stores/useIngredientStore'
 import IngredientForm from '../components/ingredient/IngredientForm'
 import IngredientList from '../components/ingredient/IngredientList'
+import EditIngredientModal from '../components/ingredient/EditIngredientModal'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
+import type { Ingredient } from '../types/ingredient'
 
 export default function StorageBoxPage() {
   const { id } = useParams<{ id: string }>()
@@ -17,8 +19,11 @@ export default function StorageBoxPage() {
     error,
     fetchByStorageBox,
     addIngredient,
+    editIngredient,
     removeIngredient,
   } = useIngredientStore()
+
+  const [editTarget, setEditTarget] = useState<Ingredient | null>(null)
 
   useEffect(() => {
     fetchByStorageBox(storageBoxId)
@@ -50,6 +55,18 @@ export default function StorageBoxPage() {
       <IngredientList
         ingredients={ingredients}
         onDelete={(ingredientId) => removeIngredient(storageBoxId, ingredientId)}
+        onEdit={(ingredient) => setEditTarget(ingredient)}
+      />
+
+      <EditIngredientModal
+        isOpen={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        ingredient={editTarget}
+        onSave={async (data) => {
+          if (editTarget) {
+            await editIngredient(storageBoxId, editTarget.id, data)
+          }
+        }}
       />
     </div>
   )

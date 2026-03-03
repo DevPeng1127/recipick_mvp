@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas.refrigerator import (
     RefrigeratorCreate,
     RefrigeratorDetailResponse,
+    RefrigeratorListResponse,
     RefrigeratorResponse,
     RefrigeratorUpdate,
 )
@@ -22,7 +23,7 @@ from app.services.refrigerator_service import (
 router = APIRouter(prefix="/refrigerators", tags=["refrigerators"])
 
 
-@router.get("", response_model=list[RefrigeratorResponse])
+@router.get("", response_model=list[RefrigeratorListResponse])
 async def list_my_refrigerators(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

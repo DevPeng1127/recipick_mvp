@@ -26,6 +26,15 @@ export interface UserPreferenceUpdate {
   dietary_habits?: string | null
 }
 
+export interface UserUpdate {
+  nickname: string
+}
+
+export const updateMe = async (body: UserUpdate): Promise<UserResponse> => {
+  const { data } = await client.patch<UserResponse>('/users/me', body)
+  return data
+}
+
 export const getMe = async (): Promise<UserResponse> => {
   const { data } = await client.get<UserResponse>('/users/me')
   return data

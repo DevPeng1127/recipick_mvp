@@ -50,6 +50,7 @@ def make_ingredient(
     storage_box_id: int = 1,
     name: str = "두부",
     quantity: int = 1,
+    unit: str = "개",
     expiry_date: date | None = None,
 ) -> Ingredient:
     if expiry_date is None:
@@ -58,6 +59,7 @@ def make_ingredient(
         storage_box_id=storage_box_id,
         name=name,
         quantity=quantity,
+        unit=unit,
         expiry_date=expiry_date,
     )
 

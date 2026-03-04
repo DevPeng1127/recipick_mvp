@@ -21,6 +21,7 @@ class StorageBox(Base):
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     type: Mapped[StorageType] = mapped_column(Enum(StorageType), nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
 
     refrigerator: Mapped["Refrigerator"] = relationship(back_populates="storage_boxes")
     ingredients: Mapped[list["Ingredient"]] = relationship(

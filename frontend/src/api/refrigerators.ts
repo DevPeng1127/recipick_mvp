@@ -34,3 +34,22 @@ export const updateRefrigerator = async (
 export const deleteRefrigerator = async (id: number): Promise<void> => {
   await client.delete(`/refrigerators/${id}`)
 }
+
+export const toggleFavorite = async (id: number): Promise<{ is_favorite: boolean }> => {
+  const { data } = await client.patch<{ is_favorite: boolean }>(`/refrigerators/${id}/favorite`)
+  return data
+}
+
+export const reorderRefrigerators = async (orderedIds: number[]): Promise<void> => {
+  await client.put('/refrigerators/reorder', { ordered_ids: orderedIds })
+}
+
+export const reorderStorageBoxes = async (
+  refrigeratorId: number,
+  orderedIds: number[]
+): Promise<void> => {
+  await client.put(
+    `/refrigerators/${refrigeratorId}/storage-boxes/reorder`,
+    { ordered_ids: orderedIds }
+  )
+}

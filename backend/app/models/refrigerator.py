@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -38,6 +38,8 @@ class RefrigeratorMember(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     role: Mapped[MemberRole] = mapped_column(Enum(MemberRole), nullable=False)
+    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0)
 
     refrigerator: Mapped["Refrigerator"] = relationship(back_populates="members")
     user: Mapped["User"] = relationship(back_populates="memberships")

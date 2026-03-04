@@ -17,5 +17,5 @@ async def recommend(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await recommend_recipe(body.refrigerator_id, current_user.id, db)
+    result = await recommend_recipe(body.refrigerator_ids, current_user.id, db)
     return RecipeResponse(recipe=result)

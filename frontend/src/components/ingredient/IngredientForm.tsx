@@ -37,6 +37,11 @@ export default function IngredientForm({ onSubmit }: IngredientFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim()) return
+    if (formData.quantity <= 0) {
+      alert('수량은 0보다 커야 합니다.')
+      setFormData((prev) => ({ ...prev, quantity: 1 }))
+      return
+    }
     await onSubmit({ ...formData, name: formData.name.trim() })
     setFormData({
       name: '',
@@ -62,20 +67,32 @@ export default function IngredientForm({ onSubmit }: IngredientFormProps) {
           type="number"
           value={formData.quantity}
           onChange={(e) =>
-            setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })
+            setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })
           }
-          min={1}
+          step="any"
           className="border border-gray-300 rounded-lg px-3 py-2 w-20 focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
         {isCustomUnit ? (
-          <input
-            type="text"
-            value={formData.unit}
-            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-            placeholder="단위"
-            className="border border-gray-300 rounded-lg px-3 py-2 w-24 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            autoFocus
-          />
+          <div className="flex gap-1">
+            <input
+              type="text"
+              value={formData.unit}
+              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+              placeholder="단위"
+              className="border border-gray-300 rounded-lg px-3 py-2 w-20 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setIsCustomUnit(false)
+                setFormData((prev) => ({ ...prev, unit: '개' }))
+              }}
+              className="text-xs text-purple-600 border border-purple-300 rounded-lg px-2 py-1 hover:bg-purple-50 whitespace-nowrap"
+            >
+              목록
+            </button>
+          </div>
         ) : (
           <select
             value={formData.unit}

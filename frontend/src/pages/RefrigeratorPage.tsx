@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useRefrigeratorStore } from '../stores/useRefrigeratorStore'
 import { useStorageBoxStore } from '../stores/useStorageBoxStore'
 import StorageBoxCard from '../components/storage/StorageBoxCard'
+import SortableContainer from '../components/common/SortableContainer'
 import CreateStorageBoxModal from '../components/storage/CreateStorageBoxModal'
 import EditStorageBoxModal from '../components/storage/EditStorageBoxModal'
 import ConfirmDialog from '../components/common/ConfirmDialog'
@@ -31,6 +32,7 @@ export default function RefrigeratorPage() {
     addStorageBox,
     editStorageBox,
     removeStorageBox,
+    reorderStorageBoxes,
   } = useStorageBoxStore()
 
   const [showCreateBox, setShowCreateBox] = useState(false)
@@ -83,16 +85,18 @@ export default function RefrigeratorPage() {
           description="보관함을 추가하고 식재료를 넣어보세요"
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {storageBoxes.map((box) => (
+        <SortableContainer
+          items={storageBoxes}
+          onReorder={(orderedIds) => reorderStorageBoxes(refrigeratorId, orderedIds)}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          renderItem={(box) => (
             <StorageBoxCard
-              key={box.id}
               storageBox={box}
               onEdit={() => setEditBoxTarget(box)}
               onDelete={() => setDeleteBoxTarget(box)}
             />
-          ))}
-        </div>
+          )}
+        />
       )}
 
       <CreateStorageBoxModal

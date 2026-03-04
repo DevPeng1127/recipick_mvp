@@ -11,12 +11,15 @@ from app.schemas.refrigerator import (
     RefrigeratorListResponse,
     RefrigeratorResponse,
     RefrigeratorUpdate,
+    ReorderRequest,
 )
 from app.services.refrigerator_service import (
     create_refrigerator,
     delete_refrigerator,
     get_refrigerator_detail,
     list_refrigerators,
+    reorder_refrigerators,
+    toggle_favorite,
     update_refrigerator,
 )
 
@@ -28,7 +31,27 @@ async def list_my_refrigerators(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await list_refrigerators(current_user.id, db)
+    rows = await list_refrigerators(current_user.id, db)
+    results = []
+    for fridge, is_favorite, _display_order in rows:
+        all_ingredients = []
+        for box in fridge.storage_boxes:
+            all_ingredients.extend(box.ingredients)
+        with_expiry = sorted(
+            [i for i in all_ingredients if i.expiry_date],
+            key=lambda i: i.expiry_date,
+        )
+        no_expiry = [i for i in all_ingredients if not i.expiry_date]
+        top = (with_expiry + no_expiry)[:7]
+        results.append(RefrigeratorListResponse(
+            id=fridge.id,
+            name=fridge.name,
+            created_at=fridge.created_at,
+            is_favorite=is_favorite,
+            top_ingredients=top,
+            total_ingredient_count=len(all_ingredients),
+        ))
+    return results
 
 
 @router.post("", response_model=RefrigeratorResponse, status_code=status.HTTP_201_CREATED)
@@ -38,6 +61,15 @@ async def create_new_refrigerator(
     db: AsyncSession = Depends(get_db),
 ):
     return await create_refrigerator(current_user.id, data, db)
+
+
+@router.put("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+async def reorder_refrigerators_endpoint(
+    data: ReorderRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await reorder_refrigerators(current_user.id, data.ordered_ids, db)
 
 
 @router.get("/{refrigerator_id}", response_model=RefrigeratorDetailResponse)
@@ -77,3 +109,15 @@ async def delete_refrigerator_endpoint(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the owner can delete a refrigerator",
         )
+
+
+@router.patch("/{refrigerator_id}/favorite")
+async def toggle_favorite_endpoint(
+    refrigerator_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await toggle_favorite(current_user.id, refrigerator_id, db)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership not found")
+    return {"is_favorite": result}

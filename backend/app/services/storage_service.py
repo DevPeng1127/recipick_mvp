@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.storage import StorageBox
@@ -9,7 +9,9 @@ async def list_storage_boxes(
     refrigerator_id: int, db: AsyncSession
 ) -> list[StorageBox]:
     result = await db.execute(
-        select(StorageBox).where(StorageBox.refrigerator_id == refrigerator_id)
+        select(StorageBox)
+        .where(StorageBox.refrigerator_id == refrigerator_id)
+        .order_by(StorageBox.display_order.asc(), StorageBox.id.asc())
     )
     return list(result.scalars().all())
 
@@ -64,3 +66,18 @@ async def delete_storage_box(
     await db.delete(storage_box)
     await db.flush()
     return True
+
+
+async def reorder_storage_boxes(
+    refrigerator_id: int, ordered_ids: list[int], db: AsyncSession
+) -> None:
+    for idx, box_id in enumerate(ordered_ids):
+        await db.execute(
+            update(StorageBox)
+            .where(
+                StorageBox.id == box_id,
+                StorageBox.refrigerator_id == refrigerator_id,
+            )
+            .values(display_order=idx)
+        )
+    await db.flush()

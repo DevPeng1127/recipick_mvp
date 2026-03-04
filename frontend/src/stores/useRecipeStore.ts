@@ -5,7 +5,7 @@ interface RecipeState {
   recipe: string
   isLoading: boolean
   error: string | null
-  fetchRecipe: (refrigeratorId: number) => Promise<void>
+  fetchRecipe: (refrigeratorIds: number[]) => Promise<void>
   clearRecipe: () => void
 }
 
@@ -14,10 +14,10 @@ export const useRecipeStore = create<RecipeState>((set) => ({
   isLoading: false,
   error: null,
 
-  fetchRecipe: async (refrigeratorId: number) => {
+  fetchRecipe: async (refrigeratorIds: number[]) => {
     set({ isLoading: true, error: null, recipe: '' })
     try {
-      const data = await recommendRecipe(refrigeratorId)
+      const data = await recommendRecipe(refrigeratorIds)
       set({ recipe: data.recipe, isLoading: false })
     } catch {
       set({ error: '레시피 추천에 실패했습니다.', isLoading: false })

@@ -9,11 +9,18 @@ export interface RefrigeratorMember {
   nickname?: string
 }
 
+export interface IngredientBrief {
+  name: string
+  expiry_date: string | null
+}
+
 export interface Refrigerator {
   id: number
   name: string
   created_at: string
-  storage_boxes?: StorageBox[]
+  is_favorite: boolean
+  top_ingredients: IngredientBrief[]
+  total_ingredient_count: number
 }
 
 export interface RefrigeratorDetail extends Refrigerator {

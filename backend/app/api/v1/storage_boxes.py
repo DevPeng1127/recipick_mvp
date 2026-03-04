@@ -4,11 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.connection import get_db
 from app.dependencies.auth import require_refrigerator_member
 from app.models.refrigerator import RefrigeratorMember
+from app.schemas.refrigerator import ReorderRequest
 from app.schemas.storage import StorageBoxCreate, StorageBoxResponse, StorageBoxUpdate
 from app.services.storage_service import (
     create_storage_box,
     delete_storage_box,
     list_storage_boxes,
+    reorder_storage_boxes,
     update_storage_box,
 )
 
@@ -35,6 +37,16 @@ async def create_box(
     db: AsyncSession = Depends(get_db),
 ):
     return await create_storage_box(refrigerator_id, data, db)
+
+
+@router.put("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+async def reorder_boxes(
+    refrigerator_id: int,
+    data: ReorderRequest,
+    member: RefrigeratorMember = Depends(require_refrigerator_member),
+    db: AsyncSession = Depends(get_db),
+):
+    await reorder_storage_boxes(refrigerator_id, data.ordered_ids, db)
 
 
 @router.put("/{storage_box_id}", response_model=StorageBoxResponse)

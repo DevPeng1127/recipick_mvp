@@ -1,5 +1,25 @@
 import type { Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
+import type { StorageType } from '../types/storage'
 import client from './client'
+
+export interface IngredientSearchResult {
+  ingredient_id: number
+  ingredient_name: string
+  quantity: number
+  unit: string
+  expiry_date: string | null
+  storage_box_name: string
+  storage_box_type: StorageType
+  refrigerator_name: string
+  refrigerator_id: number
+}
+
+export const searchIngredients = async (query: string): Promise<IngredientSearchResult[]> => {
+  const { data } = await client.get<IngredientSearchResult[]>('/ingredients/search', {
+    params: { q: query },
+  })
+  return data
+}
 
 export const listIngredientsByStorageBox = async (
   storageBoxId: number

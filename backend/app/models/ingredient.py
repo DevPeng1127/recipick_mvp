@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Index, Integer, String
+from sqlalchemy import Date, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -14,7 +14,7 @@ class Ingredient(Base):
         ForeignKey("storage_boxes.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    quantity: Mapped[float] = mapped_column(Float, nullable=False, default=1)
     unit: Mapped[str] = mapped_column(String(20), nullable=False, default="개")
     expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 

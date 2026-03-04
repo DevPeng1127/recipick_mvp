@@ -1,19 +1,30 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.refrigerator import MemberRole, Refrigerator, RefrigeratorMember
+from app.models.storage import StorageBox
 from app.schemas.refrigerator import RefrigeratorCreate, RefrigeratorUpdate
 
 
-async def list_refrigerators(user_id: int, db: AsyncSession) -> list[Refrigerator]:
+async def list_refrigerators(
+    user_id: int, db: AsyncSession
+) -> list[tuple[Refrigerator, bool, int]]:
     result = await db.execute(
-        select(Refrigerator)
+        select(Refrigerator, RefrigeratorMember.is_favorite, RefrigeratorMember.display_order)
         .join(RefrigeratorMember)
         .where(RefrigeratorMember.user_id == user_id)
-        .options(selectinload(Refrigerator.storage_boxes))
+        .options(
+            selectinload(Refrigerator.storage_boxes)
+            .selectinload(StorageBox.ingredients)
+        )
+        .order_by(
+            RefrigeratorMember.is_favorite.desc(),
+            RefrigeratorMember.display_order.asc(),
+            Refrigerator.id.asc(),
+        )
     )
-    return list(result.unique().scalars().all())
+    return list(result.unique().all())
 
 
 async def create_refrigerator(
@@ -86,3 +97,36 @@ async def delete_refrigerator(
     await db.delete(refrigerator)
     await db.flush()
     return True
+
+
+async def toggle_favorite(
+    user_id: int, refrigerator_id: int, db: AsyncSession
+) -> bool | None:
+    result = await db.execute(
+        select(RefrigeratorMember).where(
+            RefrigeratorMember.user_id == user_id,
+            RefrigeratorMember.refrigerator_id == refrigerator_id,
+        )
+    )
+    member = result.scalar_one_or_none()
+    if member is None:
+        return None
+
+    member.is_favorite = not member.is_favorite
+    await db.flush()
+    return member.is_favorite
+
+
+async def reorder_refrigerators(
+    user_id: int, ordered_ids: list[int], db: AsyncSession
+) -> None:
+    for idx, rid in enumerate(ordered_ids):
+        await db.execute(
+            update(RefrigeratorMember)
+            .where(
+                RefrigeratorMember.user_id == user_id,
+                RefrigeratorMember.refrigerator_id == rid,
+            )
+            .values(display_order=idx)
+        )
+    await db.flush()

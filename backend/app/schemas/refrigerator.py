@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.models.refrigerator import MemberRole
+from app.schemas.ingredient import IngredientBriefResponse
 
 
 class RefrigeratorCreate(BaseModel):
@@ -34,9 +35,15 @@ class RefrigeratorListResponse(BaseModel):
     id: int
     name: str
     created_at: datetime
-    storage_boxes: list["StorageBoxResponse"] = []
+    is_favorite: bool = False
+    top_ingredients: list[IngredientBriefResponse] = []
+    total_ingredient_count: int = 0
 
     model_config = {"from_attributes": True}
+
+
+class ReorderRequest(BaseModel):
+    ordered_ids: list[int]
 
 
 class RefrigeratorDetailResponse(BaseModel):
@@ -51,5 +58,4 @@ class RefrigeratorDetailResponse(BaseModel):
 
 from app.schemas.storage import StorageBoxResponse  # noqa: E402
 
-RefrigeratorListResponse.model_rebuild()
 RefrigeratorDetailResponse.model_rebuild()

@@ -45,6 +45,11 @@ export default function EditIngredientModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
+    if (quantity <= 0) {
+      alert('수량은 0보다 커야 합니다.')
+      setQuantity(1)
+      return
+    }
     await onSave({
       name: name.trim(),
       quantity,
@@ -73,21 +78,33 @@ export default function EditIngredientModal({
             <input
               type="number"
               value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-              min={1}
+              onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+              step="any"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">단위</label>
             {isCustomUnit ? (
-              <input
-                type="text"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                placeholder="단위"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                  placeholder="단위"
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomUnit(false)
+                    setUnit('개')
+                  }}
+                  className="text-xs text-purple-600 border border-purple-300 rounded-lg px-2 py-1 hover:bg-purple-50 whitespace-nowrap"
+                >
+                  목록
+                </button>
+              </div>
             ) : (
               <select
                 value={unit}

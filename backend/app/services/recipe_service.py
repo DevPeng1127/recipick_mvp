@@ -6,13 +6,25 @@ from app.services.user_service import get_user_preference
 
 
 async def recommend_recipe(
-    refrigerator_id: int, user_id: int, db: AsyncSession
+    refrigerator_ids: list[int], user_id: int, db: AsyncSession
 ) -> str:
-    ingredients = await list_ingredients_by_refrigerator(refrigerator_id, db)
+    all_ingredients = []
+    for rid in refrigerator_ids:
+        ingredients = await list_ingredients_by_refrigerator(rid, db)
+        all_ingredients.extend(ingredients)
+
     preference = await get_user_preference(user_id, db)
 
-    if not ingredients:
-        return "냉장고에 식재료가 없습니다. 식재료를 먼저 등록해주세요."
+    if not all_ingredients:
+        return "선택한 냉장고에 식재료가 없습니다. 식재료를 먼저 등록해주세요."
 
-    result = await run_recipe_graph(ingredients, preference)
+    # Deduplicate by ingredient name (keep first occurrence)
+    seen_names: set[str] = set()
+    unique_ingredients = []
+    for ingredient in all_ingredients:
+        if ingredient.name not in seen_names:
+            seen_names.add(ingredient.name)
+            unique_ingredients.append(ingredient)
+
+    result = await run_recipe_graph(unique_ingredients, preference)
     return result

@@ -5,16 +5,33 @@ from app.database.connection import get_db
 from app.dependencies.auth import get_current_user, require_refrigerator_member
 from app.models.refrigerator import RefrigeratorMember
 from app.models.user import User
-from app.schemas.ingredient import IngredientCreate, IngredientResponse, IngredientUpdate
+from app.schemas.ingredient import (
+    IngredientCreate,
+    IngredientResponse,
+    IngredientSearchResult,
+    IngredientUpdate,
+)
 from app.services.ingredient_service import (
     create_ingredient,
     delete_ingredient,
     list_ingredients_by_refrigerator,
     list_ingredients_by_storage_box,
+    search_ingredients,
     update_ingredient,
 )
 
 router = APIRouter(tags=["ingredients"])
+
+
+@router.get("/ingredients/search", response_model=list[IngredientSearchResult])
+async def search(
+    q: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not q.strip():
+        return []
+    return await search_ingredients(current_user.id, q.strip(), db)
 
 
 @router.get(

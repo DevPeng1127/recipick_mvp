@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 
 class RecipeRecommendRequest(BaseModel):
-    refrigerator_id: int
+    refrigerator_ids: list[int]
 
 
 class RecipeResponse(BaseModel):

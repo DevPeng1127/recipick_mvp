@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.ingredient import Ingredient
+from app.models.refrigerator import Refrigerator, RefrigeratorMember
 from app.models.storage import StorageBox
-from app.schemas.ingredient import IngredientCreate, IngredientUpdate
+from app.schemas.ingredient import IngredientCreate, IngredientSearchResult, IngredientUpdate
 
 
 async def list_ingredients_by_storage_box(
@@ -80,3 +81,44 @@ async def delete_ingredient(
     await db.delete(ingredient)
     await db.flush()
     return True
+
+
+async def search_ingredients(
+    user_id: int, query: str, db: AsyncSession
+) -> list[IngredientSearchResult]:
+    result = await db.execute(
+        select(
+            Ingredient.id,
+            Ingredient.name,
+            Ingredient.quantity,
+            Ingredient.unit,
+            Ingredient.expiry_date,
+            StorageBox.name.label("box_name"),
+            StorageBox.type.label("box_type"),
+            Refrigerator.name.label("fridge_name"),
+            Refrigerator.id.label("fridge_id"),
+        )
+        .join(StorageBox, Ingredient.storage_box_id == StorageBox.id)
+        .join(Refrigerator, StorageBox.refrigerator_id == Refrigerator.id)
+        .join(RefrigeratorMember, RefrigeratorMember.refrigerator_id == Refrigerator.id)
+        .where(
+            RefrigeratorMember.user_id == user_id,
+            Ingredient.name.ilike(f"%{query}%"),
+        )
+        .order_by(Ingredient.name)
+    )
+    rows = result.all()
+    return [
+        IngredientSearchResult(
+            ingredient_id=row.id,
+            ingredient_name=row.name,
+            quantity=row.quantity,
+            unit=row.unit,
+            expiry_date=row.expiry_date,
+            storage_box_name=row.box_name,
+            storage_box_type=row.box_type,
+            refrigerator_name=row.fridge_name,
+            refrigerator_id=row.fridge_id,
+        )
+        for row in rows
+    ]

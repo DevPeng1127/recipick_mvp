@@ -1,5 +1,5 @@
 export interface RecipeRecommendRequest {
-  refrigerator_id: number
+  refrigerator_ids: number[]
 }
 
 export interface RecipeResponse {

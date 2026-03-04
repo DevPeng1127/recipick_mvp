@@ -30,7 +30,6 @@ export default function StorageBoxPage() {
   }, [storageBoxId, fetchByStorageBox])
 
   if (isLoading) return <LoadingSpinner />
-  if (error) return <ErrorMessage message={error} />
 
   return (
     <div>
@@ -44,30 +43,36 @@ export default function StorageBoxPage() {
         <h1 className="text-2xl font-bold text-gray-800">식재료 관리</h1>
       </div>
 
-      <div className="mb-4">
-        <IngredientForm
-          onSubmit={async (data) => {
-            await addIngredient(storageBoxId, data)
-          }}
-        />
-      </div>
+      {error && <ErrorMessage message={error} />}
 
-      <IngredientList
-        ingredients={ingredients}
-        onDelete={(ingredientId) => removeIngredient(storageBoxId, ingredientId)}
-        onEdit={(ingredient) => setEditTarget(ingredient)}
-      />
+      {!error && (
+        <>
+          <div className="mb-4">
+            <IngredientForm
+              onSubmit={async (data) => {
+                await addIngredient(storageBoxId, data)
+              }}
+            />
+          </div>
 
-      <EditIngredientModal
-        isOpen={!!editTarget}
-        onClose={() => setEditTarget(null)}
-        ingredient={editTarget}
-        onSave={async (data) => {
-          if (editTarget) {
-            await editIngredient(storageBoxId, editTarget.id, data)
-          }
-        }}
-      />
+          <IngredientList
+            ingredients={ingredients}
+            onDelete={(ingredientId) => removeIngredient(storageBoxId, ingredientId)}
+            onEdit={(ingredient) => setEditTarget(ingredient)}
+          />
+
+          <EditIngredientModal
+            isOpen={!!editTarget}
+            onClose={() => setEditTarget(null)}
+            ingredient={editTarget}
+            onSave={async (data) => {
+              if (editTarget) {
+                await editIngredient(storageBoxId, editTarget.id, data)
+              }
+            }}
+          />
+        </>
+      )}
     </div>
   )
 }

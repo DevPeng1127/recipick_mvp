@@ -5,6 +5,7 @@ import {
   listStorageBoxes,
   updateStorageBox,
 } from '../api/storageBoxes'
+import { reorderStorageBoxes } from '../api/refrigerators'
 import type { StorageBox, StorageBoxCreate, StorageBoxUpdate } from '../types/storage'
 
 interface StorageBoxState {
@@ -19,6 +20,7 @@ interface StorageBoxState {
     data: StorageBoxUpdate
   ) => Promise<void>
   removeStorageBox: (refrigeratorId: number, storageBoxId: number) => Promise<void>
+  reorderStorageBoxes: (refrigeratorId: number, orderedIds: number[]) => Promise<void>
 }
 
 export const useStorageBoxStore = create<StorageBoxState>((set) => ({
@@ -61,5 +63,15 @@ export const useStorageBoxStore = create<StorageBoxState>((set) => ({
     set((state) => ({
       storageBoxes: state.storageBoxes.filter((sb) => sb.id !== storageBoxId),
     }))
+  },
+
+  reorderStorageBoxes: async (refrigeratorId: number, orderedIds: number[]) => {
+    set((state) => {
+      const map = new Map(state.storageBoxes.map((sb) => [sb.id, sb]))
+      return {
+        storageBoxes: orderedIds.map((id) => map.get(id)!).filter(Boolean),
+      }
+    })
+    await reorderStorageBoxes(refrigeratorId, orderedIds)
   },
 }))

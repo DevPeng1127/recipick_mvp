@@ -4,6 +4,8 @@ import {
   deleteRefrigerator,
   getRefrigerator,
   listRefrigerators,
+  reorderRefrigerators,
+  toggleFavorite,
   updateRefrigerator,
 } from '../api/refrigerators'
 import type { Refrigerator, RefrigeratorDetail } from '../types/refrigerator'
@@ -18,6 +20,8 @@ interface RefrigeratorState {
   addRefrigerator: (name: string) => Promise<void>
   editRefrigerator: (id: number, name: string) => Promise<void>
   removeRefrigerator: (id: number) => Promise<void>
+  toggleFavorite: (id: number) => Promise<void>
+  reorderRefrigerators: (orderedIds: number[]) => Promise<void>
 }
 
 export const useRefrigeratorStore = create<RefrigeratorState>((set) => ({
@@ -49,14 +53,16 @@ export const useRefrigeratorStore = create<RefrigeratorState>((set) => ({
   addRefrigerator: async (name: string) => {
     const created = await createRefrigerator({ name })
     set((state) => ({
-      refrigerators: [...state.refrigerators, created],
+      refrigerators: [...state.refrigerators, { ...created, is_favorite: false, top_ingredients: [], total_ingredient_count: 0 }],
     }))
   },
 
   editRefrigerator: async (id: number, name: string) => {
     const updated = await updateRefrigerator(id, { name })
     set((state) => ({
-      refrigerators: state.refrigerators.map((r) => (r.id === id ? updated : r)),
+      refrigerators: state.refrigerators.map((r) =>
+        r.id === id ? { ...r, ...updated } : r
+      ),
     }))
   },
 
@@ -65,5 +71,24 @@ export const useRefrigeratorStore = create<RefrigeratorState>((set) => ({
     set((state) => ({
       refrigerators: state.refrigerators.filter((r) => r.id !== id),
     }))
+  },
+
+  toggleFavorite: async (id: number) => {
+    const { is_favorite } = await toggleFavorite(id)
+    set((state) => ({
+      refrigerators: state.refrigerators.map((r) =>
+        r.id === id ? { ...r, is_favorite } : r
+      ),
+    }))
+  },
+
+  reorderRefrigerators: async (orderedIds: number[]) => {
+    set((state) => {
+      const map = new Map(state.refrigerators.map((r) => [r.id, r]))
+      return {
+        refrigerators: orderedIds.map((id) => map.get(id)!).filter(Boolean),
+      }
+    })
+    await reorderRefrigerators(orderedIds)
   },
 }))

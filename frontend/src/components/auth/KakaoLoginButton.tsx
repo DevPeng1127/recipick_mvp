@@ -3,7 +3,8 @@ import { getLoginUrl } from '../../api/auth'
 export default function KakaoLoginButton() {
   const handleClick = async () => {
     try {
-      const { login_url } = await getLoginUrl('kakao')
+      const { login_url, state } = await getLoginUrl('kakao')
+      sessionStorage.setItem('oauth_state', state)
       window.location.href = login_url
     } catch {
       alert('카카오 로그인 URL을 가져오지 못했습니다.')

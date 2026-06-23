@@ -16,8 +16,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.get("/{provider}/login-url", response_model=LoginUrlResponse)
 async def get_oauth_login_url(provider: str):
     try:
-        url = await get_login_url(provider)
-        return LoginUrlResponse(login_url=url)
+        url, state = await get_login_url(provider)
+        return LoginUrlResponse(login_url=url, state=state)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -29,7 +29,7 @@ async def oauth_callback_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        tokens = await oauth_callback(provider, body.code, db)
+        tokens = await oauth_callback(provider, body.code, body.state, db)
         return TokenResponse(**tokens)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

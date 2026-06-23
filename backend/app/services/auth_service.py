@@ -3,10 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.utils.oauth import exchange_google_code, exchange_kakao_code
-from app.utils.security import create_access_token, create_refresh_token, decode_token
+from app.utils.security import create_access_token, create_refresh_token, decode_token, verify_oauth_state
 
 
-async def get_login_url(provider: str) -> str:
+async def get_login_url(provider: str) -> tuple[str, str]:
     from app.utils.oauth import get_google_login_url, get_kakao_login_url
 
     if provider == "kakao":
@@ -16,7 +16,10 @@ async def get_login_url(provider: str) -> str:
     raise ValueError(f"Unsupported provider: {provider}")
 
 
-async def oauth_callback(provider: str, code: str, db: AsyncSession) -> dict:
+async def oauth_callback(provider: str, code: str, state: str | None, db: AsyncSession) -> dict:
+    if state is None or not verify_oauth_state(state):
+        raise ValueError("Invalid or expired OAuth state")
+
     if provider == "kakao":
         oauth_data = await exchange_kakao_code(code)
     elif provider == "google":

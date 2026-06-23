@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
 from app.models.refrigerator import RefrigeratorMember
+from app.models.storage import StorageBox
 from app.models.user import User
 from app.utils.security import decode_token
 
@@ -53,3 +54,35 @@ async def require_refrigerator_member(
             detail="Not a member of this refrigerator",
         )
     return member
+
+
+async def require_storage_box_member(
+    storage_box_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> StorageBox:
+    result = await db.execute(
+        select(StorageBox).where(StorageBox.id == storage_box_id)
+    )
+    storage_box = result.scalar_one_or_none()
+
+    if storage_box is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Storage box not found",
+        )
+
+    member_result = await db.execute(
+        select(RefrigeratorMember).where(
+            RefrigeratorMember.refrigerator_id == storage_box.refrigerator_id,
+            RefrigeratorMember.user_id == current_user.id,
+        )
+    )
+    member = member_result.scalar_one_or_none()
+
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this refrigerator",
+        )
+    return storage_box

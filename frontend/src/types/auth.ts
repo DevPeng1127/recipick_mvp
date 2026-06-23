@@ -6,4 +6,5 @@ export interface TokenResponse {
 
 export interface LoginUrlResponse {
   login_url: string
+  state: string
 }

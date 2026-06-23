@@ -6,7 +6,7 @@ interface AuthState {
   user: UserResponse | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (provider: string, code: string) => Promise<void>
+  login: (provider: string, code: string, state: string) => Promise<void>
   logout: () => void
   fetchUser: () => Promise<void>
   initialize: () => Promise<void>
@@ -18,8 +18,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: !!localStorage.getItem('access_token'),
   isLoading: false,
 
-  login: async (provider: string, code: string) => {
-    const tokens = await oauthCallback(provider, code)
+  login: async (provider: string, code: string, state: string) => {
+    const tokens = await oauthCallback(provider, code, state)
     localStorage.setItem('access_token', tokens.access_token)
     localStorage.setItem('refresh_token', tokens.refresh_token)
     const user = await getMe()

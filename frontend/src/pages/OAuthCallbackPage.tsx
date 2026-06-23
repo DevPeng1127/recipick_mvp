@@ -17,12 +17,22 @@ export default function OAuthCallbackPage() {
     hasRun.current = true
 
     const code = searchParams.get('code')
-    if (!provider || !code) {
+    const stateFromUrl = searchParams.get('state')
+    const stateFromStorage = sessionStorage.getItem('oauth_state')
+
+    if (!provider || !code || !stateFromUrl) {
       setError('잘못된 콜백 요청입니다.')
       return
     }
 
-    login(provider, code)
+    if (stateFromUrl !== stateFromStorage) {
+      setError('보안 검증에 실패했습니다. 다시 로그인해주세요.')
+      return
+    }
+
+    sessionStorage.removeItem('oauth_state')
+
+    login(provider, code, stateFromUrl)
       .then(async () => {
         const pref = await getMyPreference()
         if (pref === null) {

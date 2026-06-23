@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
-from app.dependencies.auth import get_current_user, require_refrigerator_member
+from app.dependencies.auth import get_current_user, require_refrigerator_member, require_storage_box_member
 from app.models.refrigerator import RefrigeratorMember
+from app.models.storage import StorageBox
 from app.models.user import User
 from app.schemas.ingredient import (
     IngredientCreate,
@@ -40,7 +41,7 @@ async def search(
 )
 async def list_by_storage_box(
     storage_box_id: int,
-    current_user: User = Depends(get_current_user),
+    storage_box: StorageBox = Depends(require_storage_box_member),
     db: AsyncSession = Depends(get_db),
 ):
     return await list_ingredients_by_storage_box(storage_box_id, db)
@@ -54,7 +55,7 @@ async def list_by_storage_box(
 async def create(
     storage_box_id: int,
     data: IngredientCreate,
-    current_user: User = Depends(get_current_user),
+    storage_box: StorageBox = Depends(require_storage_box_member),
     db: AsyncSession = Depends(get_db),
 ):
     return await create_ingredient(storage_box_id, data, db)
@@ -68,7 +69,7 @@ async def update(
     storage_box_id: int,
     ingredient_id: int,
     data: IngredientUpdate,
-    current_user: User = Depends(get_current_user),
+    storage_box: StorageBox = Depends(require_storage_box_member),
     db: AsyncSession = Depends(get_db),
 ):
     ingredient = await update_ingredient(ingredient_id, storage_box_id, data, db)
@@ -84,7 +85,7 @@ async def update(
 async def delete(
     storage_box_id: int,
     ingredient_id: int,
-    current_user: User = Depends(get_current_user),
+    storage_box: StorageBox = Depends(require_storage_box_member),
     db: AsyncSession = Depends(get_db),
 ):
     deleted = await delete_ingredient(ingredient_id, storage_box_id, db)

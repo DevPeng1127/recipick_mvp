@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class OAuthCallbackRequest(BaseModel):
     code: str
+    state: str
 
 
 class TokenResponse(BaseModel):
@@ -17,3 +18,4 @@ class RefreshTokenRequest(BaseModel):
 
 class LoginUrlResponse(BaseModel):
     login_url: str
+    state: str

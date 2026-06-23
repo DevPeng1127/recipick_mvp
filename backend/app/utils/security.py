@@ -23,3 +23,16 @@ def decode_token(token: str) -> dict | None:
         return payload
     except JWTError:
         return None
+
+
+def create_oauth_state() -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=5)
+    payload = {"type": "oauth_state", "exp": expire}
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def verify_oauth_state(state: str) -> bool:
+    payload = decode_token(state)
+    if payload is None:
+        return False
+    return payload.get("type") == "oauth_state"

@@ -3,7 +3,8 @@ import { getLoginUrl } from '../../api/auth'
 export default function GoogleLoginButton() {
   const handleClick = async () => {
     try {
-      const { login_url } = await getLoginUrl('google')
+      const { login_url, state } = await getLoginUrl('google')
+      sessionStorage.setItem('oauth_state', state)
       window.location.href = login_url
     } catch {
       alert('Google 로그인 URL을 가져오지 못했습니다.')

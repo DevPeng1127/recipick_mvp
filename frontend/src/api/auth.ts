@@ -8,10 +8,12 @@ export const getLoginUrl = async (provider: string): Promise<LoginUrlResponse> =
 
 export const oauthCallback = async (
   provider: string,
-  code: string
+  code: string,
+  state: string
 ): Promise<TokenResponse> => {
   const { data } = await client.post<TokenResponse>(`/auth/${provider}/callback`, {
     code,
+    state,
   })
   return data
 }

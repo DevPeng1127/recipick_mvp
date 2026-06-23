@@ -1,25 +1,32 @@
 import httpx
 
 from app.config import settings
+from app.utils.security import create_oauth_state
 
 
-async def get_kakao_login_url() -> str:
-    return (
+async def get_kakao_login_url() -> tuple[str, str]:
+    state = create_oauth_state()
+    url = (
         "https://kauth.kakao.com/oauth/authorize"
         f"?client_id={settings.KAKAO_CLIENT_ID}"
         f"&redirect_uri={settings.KAKAO_REDIRECT_URI}"
         "&response_type=code"
+        f"&state={state}"
     )
+    return url, state
 
 
-async def get_google_login_url() -> str:
-    return (
+async def get_google_login_url() -> tuple[str, str]:
+    state = create_oauth_state()
+    url = (
         "https://accounts.google.com/o/oauth2/v2/auth"
         f"?client_id={settings.GOOGLE_CLIENT_ID}"
         f"&redirect_uri={settings.GOOGLE_REDIRECT_URI}"
         "&response_type=code"
         "&scope=openid%20email%20profile"
+        f"&state={state}"
     )
+    return url, state
 
 
 async def exchange_kakao_code(code: str) -> dict:

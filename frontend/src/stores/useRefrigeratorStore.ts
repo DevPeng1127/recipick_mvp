@@ -9,6 +9,7 @@ import {
   updateRefrigerator,
 } from '../api/refrigerators'
 import type { Refrigerator, RefrigeratorDetail } from '../types/refrigerator'
+import { useToastStore } from './useToastStore'
 
 interface RefrigeratorState {
   refrigerators: Refrigerator[]
@@ -83,12 +84,18 @@ export const useRefrigeratorStore = create<RefrigeratorState>((set) => ({
   },
 
   reorderRefrigerators: async (orderedIds: number[]) => {
+    const previous = [...useRefrigeratorStore.getState().refrigerators]
     set((state) => {
       const map = new Map(state.refrigerators.map((r) => [r.id, r]))
       return {
         refrigerators: orderedIds.map((id) => map.get(id)!).filter(Boolean),
       }
     })
-    await reorderRefrigerators(orderedIds)
+    try {
+      await reorderRefrigerators(orderedIds)
+    } catch {
+      set({ refrigerators: previous })
+      useToastStore.getState().addToast('error', '순서 변경에 실패했습니다.')
+    }
   },
 }))

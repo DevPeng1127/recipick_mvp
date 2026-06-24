@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { IngredientCreate } from '../../types/ingredient'
 import { UNIT_OPTIONS, CUSTOM_UNIT_OPTION, getExpiryDate } from '../../constants/ingredients'
+import { useToastStore } from '../../stores/useToastStore'
 
 interface IngredientFormProps {
   onSubmit: (data: IngredientCreate) => Promise<void>
@@ -38,7 +39,7 @@ export default function IngredientForm({ onSubmit }: IngredientFormProps) {
     e.preventDefault()
     if (!formData.name.trim()) return
     if (formData.quantity <= 0) {
-      alert('수량은 0보다 커야 합니다.')
+      useToastStore.getState().addToast('error', '수량은 0보다 커야 합니다.')
       setFormData((prev) => ({ ...prev, quantity: 1 }))
       return
     }

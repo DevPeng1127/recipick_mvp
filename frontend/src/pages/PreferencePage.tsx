@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CookingSkill, UserPreferenceUpdate } from '../api/users'
 import { useAuthStore } from '../stores/useAuthStore'
 import { usePreferenceStore } from '../stores/usePreferenceStore'
+import { useToastStore } from '../stores/useToastStore'
 import SkillLevelSelector from '../components/preference/SkillLevelSelector'
 import AllergyTagInput from '../components/preference/AllergyTagInput'
 import CookingToolSelector from '../components/preference/CookingToolSelector'
@@ -70,7 +71,7 @@ export default function PreferencePage() {
 
   const handleSave = async () => {
     await savePreference(form)
-    alert('설정이 저장되었습니다.')
+    useToastStore.getState().addToast('success', '설정이 저장되었습니다.')
   }
 
   if (isLoading) return <LoadingSpinner />

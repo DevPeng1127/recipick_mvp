@@ -1,4 +1,5 @@
 import { getLoginUrl } from '../../api/auth'
+import { useToastStore } from '../../stores/useToastStore'
 
 export default function GoogleLoginButton() {
   const handleClick = async () => {
@@ -7,7 +8,7 @@ export default function GoogleLoginButton() {
       sessionStorage.setItem('oauth_state', state)
       window.location.href = login_url
     } catch {
-      alert('Google 로그인 URL을 가져오지 못했습니다.')
+      useToastStore.getState().addToast('error', 'Google 로그인 URL을 가져오지 못했습니다.')
     }
   }
 

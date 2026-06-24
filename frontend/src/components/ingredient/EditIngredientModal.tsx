@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Ingredient, IngredientUpdate } from '../../types/ingredient'
 import { UNIT_OPTIONS, CUSTOM_UNIT_OPTION } from '../../constants/ingredients'
 import Modal from '../common/Modal'
+import { useToastStore } from '../../stores/useToastStore'
 
 interface EditIngredientModalProps {
   isOpen: boolean
@@ -46,7 +47,7 @@ export default function EditIngredientModal({
     e.preventDefault()
     if (!name.trim()) return
     if (quantity <= 0) {
-      alert('수량은 0보다 커야 합니다.')
+      useToastStore.getState().addToast('error', '수량은 0보다 커야 합니다.')
       setQuantity(1)
       return
     }

@@ -4,6 +4,8 @@ import { useAuthStore } from './stores/useAuthStore'
 
 import AuthGuard from './components/layout/AuthGuard'
 import AppLayout from './components/layout/AppLayout'
+import ErrorBoundary from './components/common/ErrorBoundary'
+import ToastContainer from './components/common/ToastContainer'
 
 import LoginPage from './pages/LoginPage'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
@@ -23,28 +25,33 @@ function App() {
   }, [initialize])
 
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/oauth/:provider/callback" element={<OAuthCallbackPage />} />
+    <>
+      <ErrorBoundary>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/oauth/:provider/callback" element={<OAuthCallbackPage />} />
 
-      {/* Protected routes */}
-      <Route path="/onboarding" element={
-        <AuthGuard><OnboardingPage /></AuthGuard>
-      } />
+          {/* Protected routes */}
+          <Route path="/onboarding" element={
+            <AuthGuard><OnboardingPage /></AuthGuard>
+          } />
 
-      <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/refrigerators/:id" element={<RefrigeratorPage />} />
-        <Route path="/storage-boxes/:id" element={<StorageBoxPage />} />
-        <Route path="/recipes" element={<RecipePage />} />
-        <Route path="/preferences" element={<PreferencePage />} />
-      </Route>
+          <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/refrigerators/:id" element={<RefrigeratorPage />} />
+            <Route path="/storage-boxes/:id" element={<StorageBoxPage />} />
+            <Route path="/recipes" element={<RecipePage />} />
+            <Route path="/preferences" element={<PreferencePage />} />
+          </Route>
 
-      {/* Redirects and fallback */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+          {/* Redirects and fallback */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </ErrorBoundary>
+      <ToastContainer />
+    </>
   )
 }
 

@@ -7,6 +7,7 @@ import {
 } from '../api/storageBoxes'
 import { reorderStorageBoxes } from '../api/refrigerators'
 import type { StorageBox, StorageBoxCreate, StorageBoxUpdate } from '../types/storage'
+import { useToastStore } from './useToastStore'
 
 interface StorageBoxState {
   storageBoxes: StorageBox[]
@@ -66,12 +67,18 @@ export const useStorageBoxStore = create<StorageBoxState>((set) => ({
   },
 
   reorderStorageBoxes: async (refrigeratorId: number, orderedIds: number[]) => {
+    const previous = [...useStorageBoxStore.getState().storageBoxes]
     set((state) => {
       const map = new Map(state.storageBoxes.map((sb) => [sb.id, sb]))
       return {
         storageBoxes: orderedIds.map((id) => map.get(id)!).filter(Boolean),
       }
     })
-    await reorderStorageBoxes(refrigeratorId, orderedIds)
+    try {
+      await reorderStorageBoxes(refrigeratorId, orderedIds)
+    } catch {
+      set({ storageBoxes: previous })
+      useToastStore.getState().addToast('error', '순서 변경에 실패했습니다.')
+    }
   },
 }))

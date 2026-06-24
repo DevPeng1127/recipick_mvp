@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import {
+  consumeIngredient,
   createIngredient,
-  deleteIngredient,
+  disposeIngredient,
   listIngredientsByRefrigerator,
   listIngredientsByStorageBox,
   updateIngredient,
 } from '../api/ingredients'
-import type { Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
+import type { ConsumeDisposeRequest, Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
 
 interface IngredientState {
   ingredients: Ingredient[]
@@ -20,7 +21,16 @@ interface IngredientState {
     ingredientId: number,
     data: IngredientUpdate
   ) => Promise<void>
-  removeIngredient: (storageBoxId: number, ingredientId: number) => Promise<void>
+  consumeIngredient: (
+    storageBoxId: number,
+    ingredientId: number,
+    data?: ConsumeDisposeRequest
+  ) => Promise<void>
+  disposeIngredient: (
+    storageBoxId: number,
+    ingredientId: number,
+    data?: ConsumeDisposeRequest
+  ) => Promise<void>
 }
 
 export const useIngredientStore = create<IngredientState>((set) => ({
@@ -68,10 +78,29 @@ export const useIngredientStore = create<IngredientState>((set) => ({
     }))
   },
 
-  removeIngredient: async (storageBoxId: number, ingredientId: number) => {
-    await deleteIngredient(storageBoxId, ingredientId)
+  consumeIngredient: async (
+    storageBoxId: number,
+    ingredientId: number,
+    data?: ConsumeDisposeRequest
+  ) => {
+    const result = await consumeIngredient(storageBoxId, ingredientId, data)
     set((state) => ({
-      ingredients: state.ingredients.filter((i) => i.id !== ingredientId),
+      ingredients: result === null
+        ? state.ingredients.filter((i) => i.id !== ingredientId)
+        : state.ingredients.map((i) => (i.id === ingredientId ? result : i)),
+    }))
+  },
+
+  disposeIngredient: async (
+    storageBoxId: number,
+    ingredientId: number,
+    data?: ConsumeDisposeRequest
+  ) => {
+    const result = await disposeIngredient(storageBoxId, ingredientId, data)
+    set((state) => ({
+      ingredients: result === null
+        ? state.ingredients.filter((i) => i.id !== ingredientId)
+        : state.ingredients.map((i) => (i.id === ingredientId ? result : i)),
     }))
   },
 }))

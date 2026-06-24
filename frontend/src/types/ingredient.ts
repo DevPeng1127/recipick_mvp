@@ -20,3 +20,8 @@ export interface IngredientUpdate {
   unit?: string
   expiry_date?: string | null
 }
+
+export interface ConsumeDisposeRequest {
+  quantity?: number | null
+  memo?: string | null
+}

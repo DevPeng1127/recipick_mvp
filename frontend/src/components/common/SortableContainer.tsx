@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -59,6 +59,7 @@ export default function SortableContainer<T extends { id: number }>({
   className,
 }: SortableContainerProps<T>) {
   const [activeId, setActiveId] = useState<number | null>(null)
+  const justDragged = useRef(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -73,11 +74,24 @@ export default function SortableContainer<T extends { id: number }>({
     const { active, over } = event
     setActiveId(null)
 
+    justDragged.current = true
+    requestAnimationFrame(() => {
+      justDragged.current = false
+    })
+
     if (over && active.id !== over.id) {
       const oldIndex = items.findIndex((item) => item.id === active.id)
       const newIndex = items.findIndex((item) => item.id === over.id)
       const reordered = arrayMove(items, oldIndex, newIndex)
       onReorder(reordered.map((item) => item.id))
+    }
+  }
+
+  const handleClickCapture = (e: React.MouseEvent) => {
+    if (justDragged.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      justDragged.current = false
     }
   }
 
@@ -89,7 +103,7 @@ export default function SortableContainer<T extends { id: number }>({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
-        <div className={className}>
+        <div className={className} onClickCapture={handleClickCapture}>
           {items.map((item) => (
             <SortableItem key={item.id} id={item.id}>
               <div className={activeId === item.id ? 'cursor-grabbing' : 'cursor-grab'}>

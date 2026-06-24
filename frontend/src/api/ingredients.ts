@@ -1,4 +1,4 @@
-import type { Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
+import type { ConsumeDisposeRequest, Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
 import type { StorageType } from '../types/storage'
 import client from './client'
 
@@ -62,9 +62,28 @@ export const updateIngredient = async (
   return data
 }
 
-export const deleteIngredient = async (
+export const consumeIngredient = async (
   storageBoxId: number,
-  ingredientId: number
-): Promise<void> => {
-  await client.delete(`/storage-boxes/${storageBoxId}/ingredients/${ingredientId}`)
+  ingredientId: number,
+  body?: ConsumeDisposeRequest
+): Promise<Ingredient | null> => {
+  const response = await client.post<Ingredient>(
+    `/storage-boxes/${storageBoxId}/ingredients/${ingredientId}/consume`,
+    body ?? {}
+  )
+  if (response.status === 204) return null
+  return response.data
+}
+
+export const disposeIngredient = async (
+  storageBoxId: number,
+  ingredientId: number,
+  body?: ConsumeDisposeRequest
+): Promise<Ingredient | null> => {
+  const response = await client.post<Ingredient>(
+    `/storage-boxes/${storageBoxId}/ingredients/${ingredientId}/dispose`,
+    body ?? {}
+  )
+  if (response.status === 204) return null
+  return response.data
 }

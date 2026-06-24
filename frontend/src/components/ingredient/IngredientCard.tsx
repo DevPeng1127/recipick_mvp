@@ -5,13 +5,15 @@ import KebabMenu from '../common/KebabMenu'
 interface IngredientCardProps {
   ingredient: Ingredient
   onEdit?: (ingredient: Ingredient) => void
-  onDelete: (id: number) => void
+  onConsume: (ingredient: Ingredient) => void
+  onDispose: (ingredient: Ingredient) => void
 }
 
-export default function IngredientCard({ ingredient, onEdit, onDelete }: IngredientCardProps) {
+export default function IngredientCard({ ingredient, onEdit, onConsume, onDispose }: IngredientCardProps) {
   const menuItems = []
   if (onEdit) menuItems.push({ label: '수정', onClick: () => onEdit(ingredient) })
-  menuItems.push({ label: '삭제', onClick: () => onDelete(ingredient.id), danger: true })
+  menuItems.push({ label: '소비', onClick: () => onConsume(ingredient) })
+  menuItems.push({ label: '폐기', onClick: () => onDispose(ingredient), danger: true })
 
   return (
     <div className="flex items-center justify-between bg-white rounded-lg border p-3">

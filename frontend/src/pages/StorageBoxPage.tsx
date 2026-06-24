@@ -4,9 +4,12 @@ import { useIngredientStore } from '../stores/useIngredientStore'
 import IngredientForm from '../components/ingredient/IngredientForm'
 import IngredientList from '../components/ingredient/IngredientList'
 import EditIngredientModal from '../components/ingredient/EditIngredientModal'
+import ConsumeDisposeDialog from '../components/ingredient/ConsumeDisposeDialog'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
-import type { Ingredient } from '../types/ingredient'
+import type { Ingredient, ConsumeDisposeRequest } from '../types/ingredient'
+
+type ActionType = 'consume' | 'dispose'
 
 export default function StorageBoxPage() {
   const { id } = useParams<{ id: string }>()
@@ -20,14 +23,36 @@ export default function StorageBoxPage() {
     fetchByStorageBox,
     addIngredient,
     editIngredient,
-    removeIngredient,
+    consumeIngredient,
+    disposeIngredient,
   } = useIngredientStore()
 
   const [editTarget, setEditTarget] = useState<Ingredient | null>(null)
+  const [consumeDisposeTarget, setConsumeDisposeTarget] = useState<Ingredient | null>(null)
+  const [actionType, setActionType] = useState<ActionType>('consume')
 
   useEffect(() => {
     fetchByStorageBox(storageBoxId)
   }, [storageBoxId, fetchByStorageBox])
+
+  const handleConsume = (ingredient: Ingredient) => {
+    setConsumeDisposeTarget(ingredient)
+    setActionType('consume')
+  }
+
+  const handleDispose = (ingredient: Ingredient) => {
+    setConsumeDisposeTarget(ingredient)
+    setActionType('dispose')
+  }
+
+  const handleConfirmAction = async (data: ConsumeDisposeRequest) => {
+    if (!consumeDisposeTarget) return
+    if (actionType === 'consume') {
+      await consumeIngredient(storageBoxId, consumeDisposeTarget.id, data)
+    } else {
+      await disposeIngredient(storageBoxId, consumeDisposeTarget.id, data)
+    }
+  }
 
   if (isLoading) return <LoadingSpinner />
 
@@ -57,7 +82,8 @@ export default function StorageBoxPage() {
 
           <IngredientList
             ingredients={ingredients}
-            onDelete={(ingredientId) => removeIngredient(storageBoxId, ingredientId)}
+            onConsume={handleConsume}
+            onDispose={handleDispose}
             onEdit={(ingredient) => setEditTarget(ingredient)}
           />
 
@@ -70,6 +96,14 @@ export default function StorageBoxPage() {
                 await editIngredient(storageBoxId, editTarget.id, data)
               }
             }}
+          />
+
+          <ConsumeDisposeDialog
+            isOpen={!!consumeDisposeTarget}
+            onClose={() => setConsumeDisposeTarget(null)}
+            ingredient={consumeDisposeTarget}
+            actionType={actionType}
+            onConfirm={handleConfirmAction}
           />
         </>
       )}

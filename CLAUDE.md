@@ -12,7 +12,7 @@
 - Backend entry: `backend/app/main.py`
 - API router: `backend/app/api/v1/router.py`
 - API routes: `backend/app/api/v1/` (auth, users, refrigerators, storage_boxes, ingredients, recipes)
-- Models: `backend/app/models/` (user, refrigerator, storage, ingredient)
+- Models: `backend/app/models/` (user, refrigerator, storage, ingredient, ingredient_log)
 - Schemas: `backend/app/schemas/`
 - Services: `backend/app/services/`
 - Frontend entry: `frontend/src/main.tsx` (BrowserRouter wrap)
@@ -56,6 +56,8 @@ npx tsc --noEmit               # type check
 | GET | `/api/v1/ingredients/search?q=` | Search ingredients across all user's refrigerators (ILIKE) |
 | GET | `/api/v1/storage-boxes/{id}/ingredients` | List ingredients in storage box |
 | POST | `/api/v1/storage-boxes/{id}/ingredients` | Create ingredient |
+| POST | `/api/v1/storage-boxes/{sb_id}/ingredients/{id}/consume` | Consume ingredient (body: `{ quantity?: float, memo?: str }`) — 204 if fully consumed, 200 with updated ingredient if partial |
+| POST | `/api/v1/storage-boxes/{sb_id}/ingredients/{id}/dispose` | Dispose ingredient (body: `{ quantity?: float, memo?: str }`) — 204 if fully disposed, 200 with updated ingredient if partial |
 
 ## Data Flow Notes
 - `RefrigeratorListResponse` returns `is_favorite` + `top_ingredients` (up to 7, sorted by expiry) + `total_ingredient_count` (not `storage_boxes`)
@@ -78,3 +80,8 @@ npx tsc --noEmit               # type check
   - Quantity input: removed `min` constraint, validates on submit (allows typing 0.5 naturally)
   - Favorite refrigerator: star toggle on cards, favorites sorted to top (`is_favorite DESC`)
   - Drag-and-drop reorder: refrigerator cards + storage box cards (`@dnd-kit/sortable`, `display_order`)
+- **Phase 3**: Consume/dispose + DnD fix
+  - Ingredient consume/dispose: replaced hard-delete with consume (먹었음) / dispose (버렸음) actions with `IngredientLog` history
+  - Partial quantity support: consume/dispose a portion of an ingredient, remainder stays
+  - ConsumeDisposeDialog: modal with all/partial tabs, memo field, validation
+  - DnD click-through fix: `onClickCapture` guard prevents `<Link>` navigation after drag end

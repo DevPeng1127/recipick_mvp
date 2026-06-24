@@ -4,6 +4,7 @@ from pydantic import ValidationError
 
 from app.schemas.user import UserUpdate
 from app.schemas.ingredient import (
+    ConsumeDisposeRequest,
     IngredientCreate,
     IngredientUpdate,
     IngredientResponse,
@@ -191,3 +192,23 @@ class TestIngredientSearchResult:
         assert schema.ingredient_name == "연어"
         assert schema.storage_box_name == "냉동실"
         assert schema.refrigerator_name == "자취방 냉장고"
+
+
+class TestConsumeDisposeRequest:
+    def test_defaults_to_none(self):
+        schema = ConsumeDisposeRequest()
+        assert schema.quantity is None
+        assert schema.memo is None
+
+    def test_with_quantity(self):
+        schema = ConsumeDisposeRequest(quantity=2.5)
+        assert schema.quantity == 2.5
+
+    def test_with_memo(self):
+        schema = ConsumeDisposeRequest(memo="유통기한 지남")
+        assert schema.memo == "유통기한 지남"
+
+    def test_with_all_fields(self):
+        schema = ConsumeDisposeRequest(quantity=1.0, memo="반만 사용")
+        assert schema.quantity == 1.0
+        assert schema.memo == "반만 사용"

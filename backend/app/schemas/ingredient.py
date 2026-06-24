@@ -35,6 +35,11 @@ class IngredientResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ConsumeDisposeRequest(BaseModel):
+    quantity: float | None = None  # null = 전량
+    memo: str | None = None
+
+
 class IngredientSearchResult(BaseModel):
     ingredient_id: int
     ingredient_name: str

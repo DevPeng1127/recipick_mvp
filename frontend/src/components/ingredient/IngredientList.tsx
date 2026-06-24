@@ -4,11 +4,12 @@ import IngredientCard from './IngredientCard'
 
 interface IngredientListProps {
   ingredients: Ingredient[]
-  onDelete: (id: number) => void
+  onConsume: (ingredient: Ingredient) => void
+  onDispose: (ingredient: Ingredient) => void
   onEdit?: (ingredient: Ingredient) => void
 }
 
-export default function IngredientList({ ingredients, onDelete, onEdit }: IngredientListProps) {
+export default function IngredientList({ ingredients, onConsume, onDispose, onEdit }: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
       <EmptyState
@@ -25,7 +26,8 @@ export default function IngredientList({ ingredients, onDelete, onEdit }: Ingred
         <IngredientCard
           key={ingredient.id}
           ingredient={ingredient}
-          onDelete={onDelete}
+          onConsume={onConsume}
+          onDispose={onDispose}
           onEdit={onEdit}
         />
       ))}

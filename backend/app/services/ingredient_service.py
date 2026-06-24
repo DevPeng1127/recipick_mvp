@@ -1,11 +1,11 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.ingredient import Ingredient
+from app.models.ingredient_log import ActionType, IngredientLog
 from app.models.refrigerator import Refrigerator, RefrigeratorMember
 from app.models.storage import StorageBox
-from app.schemas.ingredient import IngredientCreate, IngredientSearchResult, IngredientUpdate
+from app.schemas.ingredient import ConsumeDisposeRequest, IngredientCreate, IngredientSearchResult, IngredientUpdate
 
 
 async def list_ingredients_by_storage_box(
@@ -65,22 +65,60 @@ async def update_ingredient(
     return ingredient
 
 
-async def delete_ingredient(
-    ingredient_id: int, storage_box_id: int, db: AsyncSession
-) -> bool:
+
+async def consume_or_dispose_ingredient(
+    ingredient_id: int,
+    storage_box_id: int,
+    user_id: int,
+    refrigerator_name: str,
+    refrigerator_id: int,
+    action_type: ActionType,
+    data: ConsumeDisposeRequest,
+    db: AsyncSession,
+) -> Ingredient | None:
     result = await db.execute(
-        select(Ingredient).where(
+        select(Ingredient)
+        .where(
             Ingredient.id == ingredient_id,
             Ingredient.storage_box_id == storage_box_id,
         )
+        .with_for_update()
     )
     ingredient = result.scalar_one_or_none()
     if ingredient is None:
-        return False
+        raise LookupError("Ingredient not found")
 
-    await db.delete(ingredient)
-    await db.flush()
-    return True
+    quantity = data.quantity
+    if quantity is not None and quantity <= 0:
+        raise ValueError("Quantity must be positive")
+
+    # 전량 처리: quantity가 None이거나 현재 수량 이상
+    full = quantity is None or quantity >= ingredient.quantity
+
+    log_quantity = ingredient.quantity if full else round(quantity, 4)
+
+    log = IngredientLog(
+        user_id=user_id,
+        refrigerator_id=refrigerator_id,
+        refrigerator_name=refrigerator_name,
+        ingredient_id=ingredient_id,
+        action_type=action_type,
+        ingredient_name=ingredient.name,
+        quantity=log_quantity,
+        unit=ingredient.unit,
+        expiry_date=ingredient.expiry_date,
+        memo=data.memo,
+    )
+    db.add(log)
+
+    if full:
+        await db.delete(ingredient)
+        await db.flush()
+        return None
+    else:
+        ingredient.quantity = round(ingredient.quantity - quantity, 4)
+        await db.flush()
+        return ingredient
 
 
 async def search_ingredients(

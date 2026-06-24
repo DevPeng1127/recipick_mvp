@@ -207,3 +207,62 @@ Remove:
 - Batch consume/dispose
 - Storage box name/ID in logs (can be derived from refrigerator context if needed later)
 - Fixing authorization gap in existing ingredient create/update endpoints (noted as tech debt)
+
+---
+
+## Implementation Progress (2026-06-24)
+
+### Completed (commit `ea96b51` on `phase2` branch)
+
+#### Backend
+- [x] `IngredientLog` 모델 + `ActionType` enum (`backend/app/models/ingredient_log.py`)
+- [x] `models/__init__.py`에 export 추가
+- [x] Alembic 마이그레이션 생성 및 적용 (`1338c8f9fe82_add_ingredient_logs_table`)
+- [x] `ConsumeDisposeRequest` 스키마 (`backend/app/schemas/ingredient.py`)
+- [x] `consume_or_dispose_ingredient()` 서비스 함수 (`SELECT FOR UPDATE`, 전량/부분 분기)
+- [x] `DELETE` 엔드포인트 제거, `POST .../consume` + `POST .../dispose` 추가
+- [x] 미사용 `delete_ingredient()` 함수 및 `selectinload` import 제거
+- [x] 단위 테스트: `TestConsumeDisposeRequest` (4개), `TestActionType` (4개)
+- [x] `pytest tests/unit/ -v` — 41 passed
+
+#### Frontend
+- [x] `ConsumeDisposeRequest` 타입 (`frontend/src/types/ingredient.ts`)
+- [x] `consumeIngredient()` / `disposeIngredient()` API 클라이언트 (204→null, 200→Ingredient)
+- [x] `deleteIngredient()` 제거
+- [x] Zustand 스토어: `removeIngredient` → `consumeIngredient` + `disposeIngredient`
+- [x] `ConsumeDisposeDialog` 컴포넌트 (전부/수량지정 탭, 메모, 클라이언트 검증)
+- [x] `IngredientCard` 케밥메뉴: "삭제" → "소비" + "폐기"
+- [x] `IngredientList` prop 변경 전파
+- [x] `StorageBoxPage` 다이얼로그 연결
+- [x] 프론트 테스트 10개 추가, 전체 18 passed
+- [x] `npx tsc --noEmit` 클린
+
+#### DnD 클릭 관통 수정
+- [x] `SortableContainer.tsx` — `useRef` + `onClickCapture`로 드래그 후 Link 클릭 차단
+
+#### 문서
+- [x] `CLAUDE.md` — API 테이블 업데이트, Phase 3 항목 추가
+
+### 검증 결과
+- `alembic upgrade head` — 성공
+- `pytest tests/unit/ -v` — 41 passed
+- `npx tsc --noEmit` — 에러 없음
+- `npm run test` (vitest) — 18 passed
+- 수동 테스트 — 미실시
+
+---
+
+## TODO (다음 세션)
+
+### 즉시 필요
+- [ ] **수동 테스트**: 개발서버 띄워서 소비/폐기 전량·부분 동작 확인, DnD 후 네비게이션 차단 확인
+- [ ] **스펙과의 차이 확인**:
+  - 스펙 인덱스: `(user_id, created_at)` 복합, `(user_id, action_type)` 복합 → 구현은 단일 컬럼 인덱스 3개. 현재 단계에서 문제없으나 통계 대시보드 구현 시 복합 인덱스로 변경 고려
+  - 스펙 ConsumeDisposeDialog 확인 버튼 색상: 소비=blue → 구현은 green. 디자인 의도에 따라 조정 가능
+  - `ingredient_id` 컬럼: 스펙 nullable → 구현은 NOT NULL. 실제로 null이 되는 케이스가 없으므로 현재 구현이 더 정확
+
+### 후속 작업 (Phase 3 확장)
+- [ ] 소비/폐기 이력 조회 API (`GET /ingredient-logs`)
+- [ ] 통계 대시보드 UI (소비율, 폐기율, 기간별 트렌드)
+- [ ] 기존 ingredient create/update 엔드포인트 권한 검증 개선 (tech debt)
+- [ ] `origin/phase2`에 push (현재 로컬 5 commits ahead)

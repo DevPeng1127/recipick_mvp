@@ -27,6 +27,7 @@ function SortableItem({ id, children }: SortableItemProps) {
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -39,7 +40,24 @@ function SortableItem({ id, children }: SortableItemProps) {
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} className="relative">
+      {/* 드래그 핸들 - 카드 안쪽 왼쪽 중앙 */}
+      <button
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        className="absolute top-1/2 -translate-y-1/2 left-2 z-10 w-7 h-7 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors p-0"
+        aria-label="드래그하여 순서 변경"
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="6" cy="4" r="1.75" />
+          <circle cx="10" cy="4" r="1.75" />
+          <circle cx="6" cy="8" r="1.75" />
+          <circle cx="10" cy="8" r="1.75" />
+          <circle cx="6" cy="12" r="1.75" />
+          <circle cx="10" cy="12" r="1.75" />
+        </svg>
+      </button>
       {children}
     </div>
   )
@@ -59,7 +77,6 @@ export default function SortableContainer<T extends { id: number }>({
   className,
 }: SortableContainerProps<T>) {
   const [activeId, setActiveId] = useState<number | null>(null)
-  const justDragged = useRef(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -74,24 +91,11 @@ export default function SortableContainer<T extends { id: number }>({
     const { active, over } = event
     setActiveId(null)
 
-    justDragged.current = true
-    requestAnimationFrame(() => {
-      justDragged.current = false
-    })
-
     if (over && active.id !== over.id) {
       const oldIndex = items.findIndex((item) => item.id === active.id)
       const newIndex = items.findIndex((item) => item.id === over.id)
       const reordered = arrayMove(items, oldIndex, newIndex)
       onReorder(reordered.map((item) => item.id))
-    }
-  }
-
-  const handleClickCapture = (e: React.MouseEvent) => {
-    if (justDragged.current) {
-      e.preventDefault()
-      e.stopPropagation()
-      justDragged.current = false
     }
   }
 
@@ -103,12 +107,10 @@ export default function SortableContainer<T extends { id: number }>({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
-        <div className={className} onClickCapture={handleClickCapture}>
+        <div className={className}>
           {items.map((item) => (
             <SortableItem key={item.id} id={item.id}>
-              <div className={activeId === item.id ? 'cursor-grabbing' : 'cursor-grab'}>
-                {renderItem(item)}
-              </div>
+              {renderItem(item)}
             </SortableItem>
           ))}
         </div>

@@ -35,7 +35,7 @@ export default function RefrigeratorCard({ refrigerator, onEdit, onDelete, onTog
   return (
     <Link
       to={`/refrigerators/${refrigerator.id}`}
-      className="block bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition min-h-[200px] relative"
+      className="block bg-white rounded-xl shadow-sm border pt-5 pr-5 pb-5 pl-12 hover:shadow-md transition h-[280px] relative"
     >
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-2">

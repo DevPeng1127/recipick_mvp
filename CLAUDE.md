@@ -84,4 +84,5 @@ npx tsc --noEmit               # type check
   - Ingredient consume/dispose: replaced hard-delete with consume (먹었음) / dispose (버렸음) actions with `IngredientLog` history
   - Partial quantity support: consume/dispose a portion of an ingredient, remainder stays
   - ConsumeDisposeDialog: modal with all/partial tabs, memo field, validation
-  - DnD click-through fix: `onClickCapture` guard prevents `<Link>` navigation after drag end
+  - DnD click-through fix: drag handle pattern (`setActivatorNodeRef`) - 6-dot handle for dragging, card body for clicking, no conflicts
+  - Refrigerator card: fixed height (`h-[280px]`) + left padding (`pl-12`) for handle spacing and grid uniformity

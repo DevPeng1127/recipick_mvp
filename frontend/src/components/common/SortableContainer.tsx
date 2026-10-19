@@ -1,4 +1,3 @@
-import { useRef, useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -76,8 +75,6 @@ export default function SortableContainer<T extends { id: number }>({
   renderItem,
   className,
 }: SortableContainerProps<T>) {
-  const [activeId, setActiveId] = useState<number | null>(null)
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -89,7 +86,6 @@ export default function SortableContainer<T extends { id: number }>({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-    setActiveId(null)
 
     if (over && active.id !== over.id) {
       const oldIndex = items.findIndex((item) => item.id === active.id)
@@ -103,7 +99,6 @@ export default function SortableContainer<T extends { id: number }>({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragStart={(event) => setActiveId(event.active.id as number)}
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>

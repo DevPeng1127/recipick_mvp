@@ -13,7 +13,7 @@ AI 기반 냉장고 식재료 관리 및 초개인화 레시피 추천 서비스
 ## Prerequisites
 
 - Python 3.10+
-- Node.js 18+
+- Node.js 20.19 이상(20.x), 22.13 이상(22.x), 또는 24 이상 — 린트 도구의 실행 조건
 - PostgreSQL 16+
 
 ## Setup
@@ -87,7 +87,11 @@ pytest --cov=app tests/
 ```bash
 cd frontend
 npm run test
+npm run lint
+npm run build
 ```
+
+`npm run lint`는 JavaScript·TypeScript 코드와 React Hooks 사용 방식을 정적으로 검사합니다. 사용하지 않는 변수, 잘못된 Hooks 호출, 빠진 의존성 등을 찾아내며 경고가 있어도 실패합니다. 검사 규칙은 `frontend/eslint.config.js`에 있고, 빌드 산출물인 `dist/`와 테스트 커버리지 결과는 검사에서 제외합니다.
 
 ## API Docs
 

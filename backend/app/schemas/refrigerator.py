@@ -3,15 +3,16 @@ from datetime import datetime
 from pydantic import BaseModel
 
 from app.models.refrigerator import MemberRole
+from app.schemas.common import ResourceName
 from app.schemas.ingredient import IngredientBriefResponse
 
 
 class RefrigeratorCreate(BaseModel):
-    name: str
+    name: ResourceName
 
 
 class RefrigeratorUpdate(BaseModel):
-    name: str
+    name: ResourceName
 
 
 class RefrigeratorMemberResponse(BaseModel):

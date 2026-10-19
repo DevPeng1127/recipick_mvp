@@ -81,7 +81,7 @@ export default function RecipePage() {
         />
       </div>
 
-      {error && <ErrorMessage message={error} />}
+      {error && <div role="alert"><ErrorMessage message={error} /></div>}
       <RecipeResultCard recipe={recipe} />
     </div>
   )

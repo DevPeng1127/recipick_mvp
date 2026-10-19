@@ -9,6 +9,7 @@ from app.models.user import UserPreference
 
 
 class RecipeState(TypedDict):
+    user_id: int
     ingredients: list[Ingredient]
     preference: UserPreference | None
     prompt: str
@@ -29,7 +30,7 @@ def build_prompt(state: RecipeState) -> dict:
 
 
 async def call_gemini_node(state: RecipeState) -> dict:
-    response = await call_gemini(state["prompt"])
+    response = await call_gemini(state["prompt"], user_id=state["user_id"])
     return {"raw_response": response}
 
 
@@ -55,12 +56,13 @@ def build_recipe_graph() -> StateGraph:
 
 
 async def run_recipe_graph(
-    ingredients: list[Ingredient], preference: UserPreference | None
+    ingredients: list[Ingredient], preference: UserPreference | None, *, user_id: int
 ) -> str:
     graph = build_recipe_graph()
     app = graph.compile()
 
     initial_state: RecipeState = {
+        "user_id": user_id,
         "ingredients": ingredients,
         "preference": preference,
         "prompt": "",

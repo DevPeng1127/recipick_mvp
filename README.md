@@ -64,7 +64,20 @@ uvicorn app.main:app --reload
 - 2026년 10월 19일 확인 기준, 이 모델의 일반 텍스트 입력·출력은 무료 등급에서 무료입니다. 무료 등급의 입력·응답은 Google 제품 개선에 사용될 수 있으므로 개발 검증에는 가상 식재료·설정을 사용합니다. [가격과 데이터 사용 안내](https://ai.google.dev/gemini-api/docs/pricing)
 - 분당 요청·토큰 수와 일일 요청 한도는 AI Studio에 표시되는 실제 프로젝트 한도를 확인합니다. 한도 초과 시 요청이 제한됩니다. [사용량 제한](https://ai.google.dev/gemini-api/docs/rate-limits)
 
-호출은 기존 REST `generateContent`를 사용합니다. Gemini 3 권장 temperature `1.0`, 모델 기본 추론 수준(3.5 Flash-Lite는 `minimal`), 기존 `maxOutputTokens=2048`과 HTTP 타임아웃 30초를 적용합니다. 완결된 응답의 텍스트 조각만 합쳐 레시피로 반환하며, 답변 없이 차단되거나 출력 한도로 잘린 응답은 성공으로 처리하지 않습니다. 자동 재시도나 다른 모델로의 전환은 하지 않습니다.
+호출은 기존 REST `generateContent`를 사용합니다. Gemini 3 권장 temperature `1.0`, 모델 기본 추론 수준(3.5 Flash-Lite는 `minimal`), 기존 `maxOutputTokens=2048`과 HTTP 단계별 타임아웃 30초를 적용합니다. HTTP 요청 전체에는 추가로 60초 제한을 둡니다. 완결된 응답의 텍스트 조각만 합쳐 레시피로 반환하며, 답변 없이 차단되거나 출력 한도로 잘린 응답은 성공으로 처리하지 않습니다. 자동 재시도나 다른 모델로의 전환은 하지 않습니다.
+
+#### 레시피 추천 사용량 제한
+
+| 대상 | 동시 요청 | 최근 60초 | 하루 | 하루 초기화 기준 |
+| --- | --- | --- | --- | --- |
+| 로그인 계정별 | 1건 | 3회 | 20회 | 한국 시간 자정 |
+| 앱 전체 | 계정별 제한 적용 | 12회 | 400회 | 미국 태평양 시간 자정, 서머타임 반영 |
+
+- Gemini 호출 직전에 횟수를 DB에 기록합니다. 성공·공급자 오류·시간 초과는 집계하며, 권한 거부·식재료 없음·앱의 한도 초과처럼 AI 호출 전에 끝난 요청은 집계하지 않습니다. 서버 재시작 후에도 횟수는 유지됩니다.
+- 제한 시 HTTP 429와 이유를 반환하고, 확정할 수 있는 재시도 시각을 화면에 한국 시간으로 표시합니다. 진행 중인 요청이나 Google이 재시도 시간을 제공하지 않은 경우에는 정확한 시각을 임의로 안내하지 않습니다.
+- 기존 개발 환경에도 `cd backend` 후 `alembic upgrade head`를 실행해 `recipe_usage_attempts` 테이블을 생성해야 합니다. 적용 후 실행 중인 백엔드를 재시작하거나 개발 서버의 자동 재로딩을 확인합니다. DB에 기록할 수 없으면 AI 호출을 진행하지 않습니다.
+- 사용량 기록은 성공·실패 요청의 트랜잭션과 별도로 저장합니다. 짧은 PostgreSQL 잠금으로 여러 프로세스의 한도 확인·기록을 직렬화하고, AI 응답을 기다리는 동안에는 이 잠금을 유지하지 않습니다. 비정상 종료로 남은 진행 상태는 90초 뒤 풀립니다. 2일보다 오래된 사용량 기록은 다음 허용 요청에서 정리합니다.
+- 제한값은 `backend/app/services/recipe_usage.py`에 있습니다. 같은 DB를 사용하는 앱 프로세스가 집계 대상이며, 같은 Google 프로젝트를 사용하는 다른 앱의 호출량이나 별도의 입력 토큰 한도(TPM)를 추적하지는 않습니다. Google에서 한도 초과가 발생하면 별도 안내를 표시합니다.
 
 ### 3. Frontend
 
@@ -87,10 +100,21 @@ npm run dev
 
 ```bash
 cd backend
-pytest --cov=app tests/
+python -m pytest --cov=app tests/unit/
 ```
 
 테스트는 실행할 때 별도의 임시 JWT 키를 생성하여 사용합니다. 로컬·운영 JWT 키 없이도 단위 테스트를 실행할 수 있습니다.
+
+사용량 제한의 PostgreSQL 통합 테스트는 아래와 같이 파일을 지정해 별도로 실행합니다. 로컬 주소의 개발 DB에서 무작위 전용 스키마를 생성하며, 종료 시 그 스키마만 제거합니다. 기존 애플리케이션 테이블이나 사용량은 변경하지 않습니다. 다음은 PowerShell 예시입니다.
+
+```powershell
+# backend 폴더에서 실행
+$env:RECIPICK_RUN_POSTGRES_TESTS = '1'
+.venv\Scripts\python.exe -m pytest tests/integration/test_recipe_usage.py -q -p no:cacheprovider
+Remove-Item Env:RECIPICK_RUN_POSTGRES_TESTS
+```
+
+이 파일은 기존 `setup_db`/`drop_all` 픽스처를 사용하지 않습니다. 다른 통합 테스트의 DB 초기화 방식은 별도 점검 대상이므로 위 명령의 테스트 경로를 그대로 사용합니다.
 
 ### Frontend
 

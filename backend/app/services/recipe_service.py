@@ -38,5 +38,8 @@ async def recommend_recipe(
             seen_names.add(ingredient.name)
             unique_ingredients.append(ingredient)
 
-    result = await run_recipe_graph(unique_ingredients, preference)
+    # Release the read transaction before the limiter opens its own transaction.
+    # Otherwise concurrent requests can exhaust the connection pool while waiting.
+    await db.commit()
+    result = await run_recipe_graph(unique_ingredients, preference, user_id=user_id)
     return result

@@ -14,6 +14,7 @@ from app.models.refrigerator import MemberRole, Refrigerator, RefrigeratorMember
 from app.models.user import User
 from app.services import recipe_service
 from tests.factories import make_ingredient
+from app.services.recipe_usage import RecipeRateLimitError
 
 
 @pytest.fixture
@@ -107,6 +108,8 @@ async def test_allows_owned_and_shared_refrigerators(
         call.args[0] for call in recipe_context.ingredients.await_args_list
     } == set(refrigerator_ids)
     recipe_context.ai.assert_awaited_once()
+    assert recipe_context.ai.await_args.kwargs == {"user_id": 1}
+    recipe_context.db.commit.assert_awaited_once()
 
 
 async def test_service_itself_rejects_non_member(recipe_context):
@@ -115,6 +118,32 @@ async def test_service_itself_rejects_non_member(recipe_context):
 
     recipe_context.ingredients.assert_not_awaited()
     recipe_context.ai.assert_not_awaited()
+
+
+async def test_rate_limit_response_contains_safe_retry_details(recipe_client, recipe_context):
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    recipe_context.ai.side_effect = RecipeRateLimitError(
+        "user_minute_limit", "잠시 후 다시 시도해 주세요.",
+        now=now, retry_at=now + timedelta(seconds=30),
+    )
+    response = await recipe_client.post(
+        "/api/v1/recipes/recommend", json={"refrigerator_ids": [10]}
+    )
+    assert response.status_code == 429
+    assert response.headers["Retry-After"] == "30"
+    assert response.json()["detail"]["code"] == "user_minute_limit"
+    assert response.json()["detail"]["retry_at"] == (now + timedelta(seconds=30)).isoformat()
+
+
+async def test_empty_fridge_does_not_enter_ai_or_usage_limiter(recipe_client, recipe_context):
+    recipe_context.ingredients.return_value = []
+    response = await recipe_client.post(
+        "/api/v1/recipes/recommend", json={"refrigerator_ids": [10]}
+    )
+    assert response.status_code == 200
+    recipe_context.ai.assert_not_awaited()
+    recipe_context.db.commit.assert_not_awaited()
 
 
 async def test_empty_selection_preserves_existing_response(recipe_client, recipe_context):

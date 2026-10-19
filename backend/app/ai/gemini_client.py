@@ -12,6 +12,15 @@ from app.services.recipe_usage import (
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
+class GeminiRequestError(Exception):
+    """Expose only safe provider metadata in the message and custom attributes."""
+
+    def __init__(self, kind: str, *, status_code: int | None = None):
+        self.kind = kind
+        self.status_code = status_code
+        super().__init__(f"Gemini request failed ({kind}, status={status_code})")
+
+
 def provider_rate_limit(response: httpx.Response) -> RecipeRateLimitError:
     now = datetime.now(timezone.utc)
     retry_at = None
@@ -32,9 +41,10 @@ def provider_rate_limit(response: httpx.Response) -> RecipeRateLimitError:
 
 
 async def call_gemini(prompt: str, *, user_id: int) -> str:
-    if not settings.GEMINI_API_KEY.strip():
+    api_key = settings.GEMINI_API_KEY.get_secret_value()
+    if not api_key.strip():
         raise ValueError("Gemini API key is not configured")
-    url = f"{GEMINI_API_URL}/{settings.GEMINI_MODEL}:generateContent?key={settings.GEMINI_API_KEY}"
+    url = f"{GEMINI_API_URL}/{settings.GEMINI_MODEL}:generateContent"
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -49,13 +59,25 @@ async def call_gemini(prompt: str, *, user_id: int) -> str:
     async with httpx.AsyncClient(timeout=30.0) as client:
         # Reserve only after local prompt/configuration work, immediately before I/O.
         async with recipe_usage_limiter.attempt(user_id):
-            response = await asyncio.wait_for(
-                client.post(url, json=payload), timeout=REQUEST_TIMEOUT_SECONDS
-            )
+            try:
+                response = await asyncio.wait_for(
+                    client.post(url, headers={"x-goog-api-key": api_key}, json=payload),
+                    timeout=REQUEST_TIMEOUT_SECONDS,
+                )
+            except (httpx.TimeoutException, asyncio.TimeoutError):
+                raise GeminiRequestError("timeout") from None
+            except httpx.HTTPError:
+                raise GeminiRequestError("transport_error") from None
+
             if response.status_code == 429:
                 raise provider_rate_limit(response)
-            response.raise_for_status()
-            data = response.json()
+            # Avoid constructing HTTPStatusError with provider-controlled text/URLs.
+            if not response.is_success:
+                raise GeminiRequestError("http_error", status_code=response.status_code)
+            try:
+                data = response.json()
+            except ValueError:
+                raise GeminiRequestError("invalid_json") from None
 
     candidates = data.get("candidates", [])
     if not candidates:

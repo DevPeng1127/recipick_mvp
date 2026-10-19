@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: str = "http://localhost:5173/oauth/google/callback"
 
     # Gemini AI
-    GEMINI_API_KEY: str = ""
+    GEMINI_API_KEY: SecretStr = SecretStr("")
     GEMINI_MODEL: str = "gemini-3.5-flash-lite"
 
     # App

@@ -1,10 +1,13 @@
 import json
+import logging
 import secrets
+import traceback
 from contextlib import asynccontextmanager
 
 import httpx
 from httpx import AsyncClient as HttpxAsyncClient
 import pytest
+from pydantic import SecretStr
 
 from app.ai import gemini_client
 from app.ai.recipe_graph import run_recipe_graph
@@ -54,7 +57,8 @@ def completed_response(parts):
     }
 
 
-async def test_recipe_graph_calls_flash_lite_and_returns_complete_recipe(mock_gemini):
+async def test_recipe_graph_calls_flash_lite_and_returns_complete_recipe(mock_gemini, caplog):
+    caplog.set_level(logging.INFO, logger="httpx")
     recipe = "## 두부 구이\n\n1. 두부를 썰어 굽습니다."
     requests = mock_gemini(httpx.Response(200, json=completed_response([
         {"text": "## 두부 구이\n\n"},
@@ -71,6 +75,11 @@ async def test_recipe_graph_calls_flash_lite_and_returns_complete_recipe(mock_ge
     assert request.method == "POST"
     assert request.url.host == "generativelanguage.googleapis.com"
     assert request.url.path == "/v1beta/models/gemini-3.5-flash-lite:generateContent"
+    assert not request.url.query
+    assert request.headers["x-goog-api-key"] == "test-only-key"
+    assert "test-only-key" not in request.content.decode()
+    assert "HTTP Request: POST" in caplog.text
+    assert "test-only-key" not in caplog.text
     payload = json.loads(request.content)
     prompt = payload["contents"][0]["parts"][0]["text"]
     assert "두부" in prompt
@@ -131,23 +140,35 @@ async def test_rejects_incomplete_answer_without_retry(mock_gemini, reason):
     assert len(requests) == 1
 
 
-@pytest.mark.parametrize("status", [403, 404, 503])
-async def test_propagates_http_errors_without_retry_or_fallback(mock_gemini, status):
-    requests = mock_gemini(httpx.Response(status, json={"error": {"code": status}}))
+@pytest.mark.parametrize("status", [307, 403, 404, 503])
+async def test_sanitizes_http_errors_without_retry_or_fallback(mock_gemini, status):
+    requests = mock_gemini(httpx.Response(
+        status, json={"error": {"code": status, "message": "test-only-key"}},
+        headers={"Location": "https://other.invalid/?key=test-only-key"},
+    ))
 
-    with pytest.raises(httpx.HTTPStatusError) as error:
+    with pytest.raises(gemini_client.GeminiRequestError) as error:
         await gemini_client.call_gemini("test prompt", user_id=1)
 
-    assert error.value.response.status_code == status
+    assert error.value.status_code == status
+    assert error.value.kind == "http_error"
+    assert "test-only-key" not in "".join(traceback.format_exception(error.value))
     assert len(requests) == 1
 
 
-async def test_propagates_timeout_without_retry(mock_gemini):
-    requests = mock_gemini(httpx.ReadTimeout("Test timeout"))
+@pytest.mark.parametrize("failure,kind", [
+    (httpx.ReadTimeout("test-only-key private timeout"), "timeout"),
+    (httpx.ConnectError("test-only-key private connection"), "transport_error"),
+    (httpx.LocalProtocolError("Illegal header value: test-only-key"), "transport_error"),
+])
+async def test_sanitizes_transport_failures_without_retry(mock_gemini, failure, kind):
+    requests = mock_gemini(failure)
 
-    with pytest.raises(httpx.ReadTimeout):
+    with pytest.raises(gemini_client.GeminiRequestError) as error:
         await gemini_client.call_gemini("test prompt", user_id=1)
 
+    assert error.value.kind == kind
+    assert "test-only-key" not in "".join(traceback.format_exception(error.value))
     assert len(requests) == 1
 
 
@@ -181,7 +202,7 @@ async def test_rejected_reservation_does_not_contact_gemini(mock_gemini, monkeyp
 async def test_missing_key_does_not_reserve_usage(mock_gemini, monkeypatch):
     from unittest.mock import AsyncMock
     requests = mock_gemini(httpx.Response(200, json={}))
-    monkeypatch.setattr(gemini_client.settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(gemini_client.settings, "GEMINI_API_KEY", SecretStr(""))
     limiter = AsyncMock()
     monkeypatch.setattr(gemini_client, "recipe_usage_limiter", limiter)
     with pytest.raises(ValueError, match="key is not configured"):
@@ -209,6 +230,55 @@ async def test_absolute_request_timeout_finishes_lease(mock_gemini, monkeypatch)
     monkeypatch.setattr(HttpxAsyncClient, "post", slow_post)
     monkeypatch.setattr(gemini_client, "recipe_usage_limiter", RecordingLimiter())
     monkeypatch.setattr(gemini_client, "REQUEST_TIMEOUT_SECONDS", 0.01)
-    with pytest.raises(asyncio.TimeoutError):
+    with pytest.raises(gemini_client.GeminiRequestError) as error:
         await gemini_client.call_gemini("test prompt", user_id=1)
+    assert error.value.kind == "timeout"
     assert events == ["reserved", "called", "finished"]
+
+
+def test_gemini_key_is_masked_in_settings_output(mock_gemini):
+    config = gemini_client.settings
+    assert config.GEMINI_API_KEY.get_secret_value() == "test-only-key"
+    for output in (str(config), repr(config), str(config.model_dump()), config.model_dump_json()):
+        assert "test-only-key" not in output
+    assert "**********" in config.model_dump_json()
+
+
+@pytest.mark.parametrize("provider_response,kind", [
+    (httpx.Response(403, json={"error": {"message": "test-only-key private-body"}}), "http_error"),
+    (httpx.Response(503, json={"error": {"message": "test-only-key private-body"}}), "http_error"),
+    (httpx.ConnectError("test-only-key private-transport"), "transport_error"),
+    (httpx.ReadTimeout("test-only-key private-transport"), "timeout"),
+    (httpx.Response(200, content=b"test-only-key private-body"), "invalid_json"),
+])
+async def test_provider_errors_are_handled_without_leaking_to_server_logs(
+    mock_gemini, caplog, provider_response, kind,
+):
+    from fastapi import FastAPI
+    from app.middleware.error_handler import add_error_handlers
+
+    # Default raise_app_exceptions=True proves failures cannot reach Uvicorn's
+    # raw exception logger. Exercise the real LangGraph and exception handlers.
+    app = FastAPI()
+    add_error_handlers(app)
+
+    @app.post("/recommend")
+    async def recommend():
+        return await run_recipe_graph([make_ingredient()], None, user_id=1)
+
+    requests = mock_gemini(provider_response)
+    caplog.set_level(logging.INFO)
+    async with HttpxAsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test",
+    ) as client:
+        response = await client.post("/recommend")
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal server error"}
+    assert len(requests) == 1
+    assert f"kind={kind}" in caplog.text
+    assert "POST /recommend" in caplog.text
+    assert "gemini_client.py:" in caplog.text
+    for secret in ("test-only-key", "private-body", "private-transport"):
+        assert secret not in caplog.text
+        assert secret not in response.text
+        assert secret not in str(caplog.records)

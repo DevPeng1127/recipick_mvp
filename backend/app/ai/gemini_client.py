@@ -11,7 +11,9 @@ async def call_gemini(prompt: str) -> str:
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "temperature": 0.7,
+            # Gemini 3 recommends 1.0; leave thinking at the model default
+            # (minimal for Gemini 3.5 Flash-Lite).
+            "temperature": 1.0,
             "maxOutputTokens": 2048,
         },
     }
@@ -25,4 +27,17 @@ async def call_gemini(prompt: str) -> str:
     if not candidates:
         raise ValueError("No response from Gemini API")
 
-    return candidates[0]["content"]["parts"][0]["text"]
+    candidate = candidates[0]
+    if candidate.get("finishReason") != "STOP":
+        raise ValueError("Gemini API did not return a complete response")
+
+    parts = candidate.get("content", {}).get("parts", [])
+    text = "".join(
+        part["text"]
+        for part in parts
+        if isinstance(part.get("text"), str) and not part.get("thought", False)
+    )
+    if not text.strip():
+        raise ValueError("No text response from Gemini API")
+
+    return text

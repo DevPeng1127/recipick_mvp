@@ -1,6 +1,8 @@
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.recipe_graph import run_recipe_graph
+from app.models.refrigerator import RefrigeratorMember
 from app.services.ingredient_service import list_ingredients_by_refrigerator
 from app.services.user_service import get_user_preference
 
@@ -8,6 +10,16 @@ from app.services.user_service import get_user_preference
 async def recommend_recipe(
     refrigerator_ids: list[int], user_id: int, db: AsyncSession
 ) -> str:
+    memberships = await db.execute(
+        select(RefrigeratorMember.refrigerator_id).where(
+            RefrigeratorMember.user_id == user_id,
+            RefrigeratorMember.refrigerator_id.in_(refrigerator_ids),
+        )
+    )
+    # Authorize the entire selection before reading ingredients or calling AI.
+    if set(memberships.scalars().all()) != set(refrigerator_ids):
+        raise PermissionError("Not a member of one or more requested refrigerators")
+
     all_ingredients = []
     for rid in refrigerator_ids:
         ingredients = await list_ingredients_by_refrigerator(rid, db)

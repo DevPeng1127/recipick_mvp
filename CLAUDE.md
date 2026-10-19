@@ -1,5 +1,9 @@
 # Recipick MVP
 
+## Current Audit and Repair Workflow
+- Read [docs/code-audit-and-repair-log.md](docs/code-audit-and-repair-log.md) before continuing repairs.
+- Work on one repair item at a time. After implementation and verification, wait for the user's explicit confirmation before starting the next item.
+
 ## Architecture
 - **Backend**: Python 3.12 / FastAPI / async SQLAlchemy + asyncpg (`backend/`)
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS (`frontend/`)

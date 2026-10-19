@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Modal from '../common/Modal'
 import type { Ingredient, ConsumeDisposeRequest } from '../../types/ingredient'
 
@@ -9,7 +9,7 @@ interface ConsumeDisposeDialogProps {
   onClose: () => void
   ingredient: Ingredient | null
   actionType: ActionType
-  onConfirm: (data: ConsumeDisposeRequest) => void
+  onConfirm: (data: ConsumeDisposeRequest) => Promise<void>
 }
 
 export default function ConsumeDisposeDialog({
@@ -23,6 +23,8 @@ export default function ConsumeDisposeDialog({
   const [quantity, setQuantity] = useState('')
   const [memo, setMemo] = useState('')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   const isConsume = actionType === 'consume'
   const title = isConsume ? '식재료 소비' : '식재료 폐기'
@@ -31,18 +33,25 @@ export default function ConsumeDisposeDialog({
     ? 'bg-green-500 hover:bg-green-600'
     : 'bg-red-500 hover:bg-red-600'
 
-  const handleClose = () => {
+  const resetInputs = () => {
     setMode('all')
     setQuantity('')
     setMemo('')
     setError('')
+  }
+
+  const handleClose = () => {
+    if (submittingRef.current) return
+    resetInputs()
     onClose()
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (submittingRef.current) return
+    let requestedQuantity: number | null = null
     if (mode === 'partial') {
       const qty = parseFloat(quantity)
-      if (isNaN(qty) || qty <= 0) {
+      if (!Number.isFinite(qty) || qty <= 0) {
         setError('수량은 0보다 커야 합니다')
         return
       }
@@ -50,18 +59,30 @@ export default function ConsumeDisposeDialog({
         setError(`현재 수량(${ingredient.quantity}${ingredient.unit})보다 클 수 없습니다`)
         return
       }
-      onConfirm({ quantity: qty, memo: memo || null })
-    } else {
-      onConfirm({ quantity: null, memo: memo || null })
+      requestedQuantity = qty
     }
-    handleClose()
+
+    // Lock immediately, including clicks before React renders the disabled state.
+    submittingRef.current = true
+    setIsSubmitting(true)
+    setError('')
+    try {
+      await onConfirm({ quantity: requestedQuantity, memo: memo || null })
+      resetInputs()
+      onClose()
+    } catch {
+      setError(`${isConsume ? '소비' : '폐기'} 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.`)
+    } finally {
+      submittingRef.current = false
+      setIsSubmitting(false)
+    }
   }
 
   if (!ingredient) return null
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={title}>
-      <div className="space-y-4">
+    <Modal isOpen={isOpen} onClose={handleClose} title={title} closeDisabled={isSubmitting}>
+      <fieldset disabled={isSubmitting} aria-busy={isSubmitting} className="space-y-4">
         <div>
           <p className="text-sm text-gray-600 mb-1">
             <span className="font-medium text-gray-800">{ingredient.name}</span>
@@ -110,7 +131,6 @@ export default function ConsumeDisposeDialog({
               />
               <span className="text-sm text-gray-500">{ingredient.unit}</span>
             </div>
-            {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
           </div>
         )}
 
@@ -126,15 +146,17 @@ export default function ConsumeDisposeDialog({
           />
         </div>
 
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+
         {/* 확인 버튼 */}
         <button
           type="button"
           onClick={handleSubmit}
-          className={`w-full py-2.5 text-white rounded-lg text-sm font-medium ${buttonColor}`}
+          className={`w-full py-2.5 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${buttonColor}`}
         >
-          {buttonLabel}
+          {isSubmitting ? '처리 중...' : buttonLabel}
         </button>
-      </div>
+      </fieldset>
     </Modal>
   )
 }

@@ -1,8 +1,6 @@
 """Opt-in PostgreSQL tests; create and remove only an isolated random schema."""
 import asyncio
 import importlib.util
-import os
-import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -12,18 +10,10 @@ import pytest
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
 from sqlalchemy import func, inspect, select
-from sqlalchemy.engine import make_url
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.schema import CreateSchema, DropSchema
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.config import settings
 from app.models.recipe_usage import RecipeUsageAttempt
 from app.services.recipe_usage import RecipeRateLimitError, RecipeUsageLimiter, day_bounds
-
-pytestmark = pytest.mark.skipif(
-    os.environ.get("RECIPICK_RUN_POSTGRES_TESTS") != "1",
-    reason="Set RECIPICK_RUN_POSTGRES_TESTS=1 to run isolated local PostgreSQL tests.",
-)
 
 
 def migration(connection, direction="upgrade"):
@@ -36,34 +26,13 @@ def migration(connection, direction="upgrade"):
 
 
 @pytest.fixture
-async def usage_db():
-    url = make_url(settings.DATABASE_URL)
-    if settings.APP_ENV != "development" or url.host not in {"localhost", "127.0.0.1", "::1"}:
-        pytest.fail("These tests require an explicitly local development database.")
-    schema = f"recipick_usage_test_{uuid.uuid4().hex}"
-    admin = create_async_engine(url, echo=False)
-    engine = create_async_engine(
-        url, echo=False, max_overflow=15,
-        connect_args={"server_settings": {"search_path": schema, "application_name": "recipick-usage-tests"}},
-    )
-    created = False
-    try:
-        async with admin.begin() as connection:
-            await connection.execute(CreateSchema(schema))
-        created = True
-        async with engine.begin() as connection:
-            await connection.run_sync(migration)
-        factory = async_sessionmaker(engine, expire_on_commit=False)
-        clock = SimpleNamespace(now=datetime(2026, 10, 19, 12, tzinfo=timezone.utc))
-        limiter = RecipeUsageLimiter(factory, clock=lambda: clock.now)
-        yield SimpleNamespace(engine=engine, factory=factory, clock=clock, limiter=limiter)
-    finally:
-        await engine.dispose()
-        if created:
-            assert re.fullmatch(r"recipick_usage_test_[0-9a-f]{32}", schema)
-            async with admin.begin() as connection:
-                await connection.execute(DropSchema(schema, cascade=True))
-        await admin.dispose()
+async def usage_db(test_engine):
+    async with test_engine.begin() as connection:
+        await connection.run_sync(migration)
+    factory = async_sessionmaker(test_engine, expire_on_commit=False)
+    clock = SimpleNamespace(now=datetime(2026, 10, 19, 12, tzinfo=timezone.utc))
+    limiter = RecipeUsageLimiter(factory, clock=lambda: clock.now)
+    return SimpleNamespace(engine=test_engine, factory=factory, clock=clock, limiter=limiter)
 
 
 async def rows(usage_db):

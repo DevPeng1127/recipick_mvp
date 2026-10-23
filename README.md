@@ -116,18 +116,33 @@ cd backend
 python -m pytest --cov=app tests/unit/
 ```
 
-테스트는 실행할 때 별도의 임시 JWT 키를 생성하여 사용합니다. 로컬·운영 JWT 키 없이도 단위 테스트를 실행할 수 있습니다.
+테스트는 실행할 때 별도의 임시 JWT 키를 생성하여 사용합니다. 로컬·운영 JWT 키나 테스트 DB 없이도 단위 테스트를 실행할 수 있습니다. 테스트 도중 앱의 기본 DB 엔진에 연결하는 호출은 차단합니다. API 테스트는 공용 `client`/`db` 픽스처를 사용하고, 별도 세션이 필요한 서비스에는 테스트 엔진으로 만든 세션 팩토리를 전달합니다.
 
-사용량 제한의 PostgreSQL 통합 테스트는 아래와 같이 파일을 지정해 별도로 실행합니다. 로컬 주소의 개발 DB에서 무작위 전용 스키마를 생성하며, 종료 시 그 스키마만 제거합니다. 기존 애플리케이션 테이블이나 사용량은 변경하지 않습니다. 다음은 PowerShell 예시입니다.
+#### PostgreSQL 통합 테스트 안전 설정
+
+DB 테스트는 **명시적 실행 허용과 테스트 전용 DB 주소가 모두 필요**합니다. `RECIPICK_RUN_POSTGRES_TESTS=1`이 없으면 DB 테스트를 건너뜁니다. 실행을 허용했는데 주소가 누락되거나 안전 조건을 충족하지 못하면 연결 전에 실패합니다. 앱 `DATABASE_URL`로부터 테스트 주소를 자동 생성하지 않습니다.
+
+- `TEST_DATABASE_URL`은 **실행 셸의 환경변수**로 지정합니다. `backend/.env`에 이 이름을 추가하는 것만으로는 테스트에 적용되지 않습니다.
+- `APP_ENV=development`이며 `postgresql+asyncpg`와 로컬 호스트(`localhost`, `127.0.0.1`, `::1`)만 허용합니다. 원격 DB·운영 환경은 지원하지 않습니다.
+- DB 이름은 소문자로 시작하고 소문자·숫자·밑줄만 사용하며, `_test`로 끝나는 63자 이하 이름이어야 합니다. 앱 DB와 같은 이름은 사용자·호스트·포트가 달라도 거부합니다. 주소의 쿼리 매개변수도 거부합니다.
+- 테스트 DB는 미리 생성해야 합니다(예: `createdb recipick_test`). 해당 DB에서 스키마를 만들 수 있는 계정을 사용합니다. 테스트 코드가 DB·계정·권한을 자동 생성하지는 않습니다.
+- 각 테스트는 무작위 `recipick_test_<UUID>` 스키마만 사용합니다. `public`으로 넘어가지 않는 검색 경로를 확인하고, 종료·실패 시 자신이 만든 스키마만 정리합니다. DB 전체 테이블을 삭제하는 `drop_all`은 사용하지 않습니다.
+
+아래 예시의 계정·비밀번호는 테스트 DB에 맞게 바꿉니다. 비밀번호의 특수문자는 URL 인코딩합니다. 다음은 PowerShell 예시입니다.
 
 ```powershell
 # backend 폴더에서 실행
 $env:RECIPICK_RUN_POSTGRES_TESTS = '1'
-.venv\Scripts\python.exe -m pytest tests/integration/test_recipe_usage.py -q -p no:cacheprovider
-Remove-Item Env:RECIPICK_RUN_POSTGRES_TESTS
+$env:TEST_DATABASE_URL = 'postgresql+asyncpg://TEST_USER:TEST_PASSWORD@127.0.0.1:5432/recipick_test'
+try {
+    .venv\Scripts\python.exe -m pytest tests/unit/ tests/integration/ -q -p no:cacheprovider
+} finally {
+    Remove-Item Env:RECIPICK_RUN_POSTGRES_TESTS
+    Remove-Item Env:TEST_DATABASE_URL
+}
 ```
 
-이 파일은 기존 `setup_db`/`drop_all` 픽스처를 사용하지 않습니다. 다른 통합 테스트의 DB 초기화 방식은 별도 점검 대상이므로 위 명령의 테스트 경로를 그대로 사용합니다.
+레시피 사용량 테스트만 실행하려면 경로를 `tests/integration/test_recipe_usage.py`로 좁힙니다. 이 테스트도 이제 앱 개발 DB가 아닌 명시한 테스트 DB를 사용합니다. 일반 종료와 테스트 예외에는 자동 정리가 실행되지만 프로세스 강제 종료나 DB 연결 단절 시 임시 스키마가 남을 수 있습니다. 이 경우 해당 실행에서 만든 스키마를 확인한 뒤 정리하며, 다른 스키마를 일괄 삭제하지 않습니다.
 
 ### Frontend
 

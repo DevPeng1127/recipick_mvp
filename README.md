@@ -14,6 +14,7 @@ AI 기반 냉장고 식재료 관리 및 초개인화 레시피 추천 서비스
 
 - Python 3.10+
 - Node.js 20.19 이상(20.x), 22.13 이상(22.x), 또는 24 이상 — 린트 도구의 실행 조건
+- npm 11.19.1 이상(11.x) — 검증 버전은 11.19.1이며 `frontend/package.json`에 기록
 - PostgreSQL 16+
 
 ## Setup
@@ -85,9 +86,19 @@ API 키는 [Google의 인증 방식](https://ai.google.dev/api#authentication)�
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
+
+`npm ci`는 커밋된 `package-lock.json`의 버전대로 설치합니다. Node 22.19.0 / npm 11.19.1에서 검증했습니다. 기존 npm 10.9.3에서는 Vitest 의존성 설치 중 `edgesOut` 오류가 발생하여 npm을 업데이트했습니다. 다른 PC에서도 먼저 `node --version`과 `npm --version`을 확인합니다. `packageManager` 항목만으로 시스템 npm이 자동 업데이트되지는 않습니다.
+
+Windows PowerShell에서 호스트·포트 옵션을 추가할 때는 `npm.cmd run dev -- --host 127.0.0.1 --port 5175 --strictPort`를 사용합니다. 이 환경에서는 `npm`의 PowerShell 실행 파일이 옵션을 가로채는 현상이 확인되었습니다.
+
+설치 스크립트는 `package.json`의 `allowScripts`에서 검토한 `esbuild@0.25.12`, `msw@2.12.10`만 허용합니다. 패키지 업데이트 후 새 스크립트 승인이 필요하면 `npm install-scripts ls`로 확인하고 검토한 항목만 승인합니다. [npm 설치 스크립트 안내](https://docs.npmjs.com/cli/v11/commands/npm-install-scripts/)
+
+#### 의존성 보안 점검
+
+2026년 10월 19일 업데이트 후 `npm audit` 결과는 24건에서 **7건(High 5, Moderate 2)**으로 줄었고, `npm audit --omit=dev`는 **0건**입니다. 전체 감사는 남은 항목 때문에 종료 코드 1을 반환합니다. Tailwind 3을 유지하기로 한 결정에 따라 `braces`와 `postcss-selector-parser`의 문제가 개발 의존성 7개에 걸쳐 남아 있습니다. 이는 전체 프로젝트의 취약점이 없다는 의미는 아닙니다. 원인·영향 조건·후속 검토 사항은 [항목 10 기록](docs/code-audit-and-repair-log.md#항목-10-수정-기록)을 참고합니다.
 
 ## 배포 전 JWT 키 준비
 

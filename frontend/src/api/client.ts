@@ -1,47 +1,116 @@
-import axios from 'axios'
+import axios, { type InternalAxiosRequestConfig } from 'axios'
+import type { TokenResponse } from '../types/auth'
+
+interface AuthRequest extends InternalAxiosRequestConfig {
+  _retry?: boolean
+  _sessionId?: number
+  _tokenVersion?: number
+}
+
+interface AuthSession {
+  id: number
+  accessToken: string | null
+  refreshToken: string | null
+  tokenVersion: number
+  refreshPromise: Promise<void> | null
+}
+
+let sessionId = 0
+let activeSession: AuthSession | undefined
+
+function getSession(): AuthSession {
+  const accessToken = localStorage.getItem('access_token')
+  const refreshToken = localStorage.getItem('refresh_token')
+  // Login/logout changes storage outside this client. A stale request must not
+  // replace that session's tokens or retry with another user's credentials.
+  if (!activeSession || activeSession.accessToken !== accessToken || activeSession.refreshToken !== refreshToken) {
+    activeSession = { id: ++sessionId, accessToken, refreshToken, tokenVersion: 0, refreshPromise: null }
+  }
+  return activeSession
+}
+
+function endSession(session: AuthSession) {
+  if (getSession() !== session) return
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+  // Invalidate even a session with no tokens, so concurrent failures redirect once.
+  activeSession = undefined
+  window.location.href = '/login'
+}
+
+function refreshSession(session: AuthSession): Promise<void> {
+  if (!session.refreshPromise) {
+    session.refreshPromise = (async () => {
+      try {
+        // Use bare axios so a refresh failure cannot enter this interceptor again.
+        const { data } = await axios.post<TokenResponse>('/api/v1/auth/refresh', {
+          refresh_token: session.refreshToken,
+        }, { timeout: 30_000 })
+        if (getSession() !== session) throw new axios.CanceledError('Authentication session changed')
+        if (typeof data?.access_token !== 'string' || !data.access_token.trim()
+          || typeof data?.refresh_token !== 'string' || !data.refresh_token.trim()) {
+          throw new Error('Invalid token refresh response')
+        }
+        localStorage.setItem('access_token', data.access_token)
+        localStorage.setItem('refresh_token', data.refresh_token)
+        session.accessToken = data.access_token
+        session.refreshToken = data.refresh_token
+        // A refresh may return identical token strings. Track completed refreshes
+        // separately so late 401 responses still reuse the completed refresh.
+        session.tokenVersion++
+      } catch (error) {
+        endSession(session)
+        throw error
+      } finally {
+        session.refreshPromise = null
+      }
+    })()
+  }
+  return session.refreshPromise
+}
 
 const client = axios.create({
   baseURL: '/api/v1',
   headers: { 'Content-Type': 'application/json' },
 })
 
-client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+client.interceptors.request.use((config: AuthRequest) => {
+  const session = getSession()
+  if (config._retry && config._sessionId !== session.id) {
+    throw new axios.CanceledError('Authentication session changed')
   }
+  config._sessionId = session.id
+  config._tokenVersion = session.tokenVersion
+  if (session.accessToken) config.headers.Authorization = `Bearer ${session.accessToken}`
+  else config.headers.delete('Authorization')
   return config
 })
 
 client.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
-      const refreshToken = localStorage.getItem('refresh_token')
-
-      if (refreshToken) {
-        try {
-          const { data } = await axios.post('/api/v1/auth/refresh', {
-            refresh_token: refreshToken,
-          })
-          localStorage.setItem('access_token', data.access_token)
-          localStorage.setItem('refresh_token', data.refresh_token)
-          originalRequest.headers.Authorization = `Bearer ${data.access_token}`
-          return client(originalRequest)
-        } catch {
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('refresh_token')
-          window.location.href = '/login'
-        }
-      } else {
-        window.location.href = '/login'
+  async (error: unknown) => {
+    if (!axios.isAxiosError(error) || error.response?.status !== 401 || !error.config) throw error
+    const originalRequest = error.config as AuthRequest
+    const session = getSession()
+    if (originalRequest._sessionId !== session.id) throw error
+    if (originalRequest._retry) {
+      if (!session.refreshPromise && originalRequest._tokenVersion === session.tokenVersion) endSession(session)
+      throw error
+    }
+    if (!session.refreshToken || originalRequest.url === '/auth/refresh') {
+      endSession(session)
+      throw error
+    }
+    originalRequest._retry = true
+    if (session.refreshPromise || originalRequest._tokenVersion === session.tokenVersion) {
+      try {
+        await refreshSession(session)
+      } catch {
+        throw error
       }
     }
-
-    return Promise.reject(error)
+    if (getSession() !== session) throw error
+    return client(originalRequest)
   }
 )
 

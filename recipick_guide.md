@@ -5,6 +5,16 @@
 - **핵심 철학 2:** **"Intuitive Storage (직관적 보관)"** - 냉장고 내 보관함 단위의 세밀한 위치 관리
 - **핵심 철학 3:** **"Hyper-Personalization (초개인화)"** - 유저의 장비, 알러지, 실력에 맞춘 AI 레시피
 
+# 기능 개발 우선순위 (2026-10-26 합의)
+
+1. 자동 입력: **영수증 사진 우선**, 이후 음성 입력. 인식 결과는 사용자가 확인·수정한 뒤 등록한다.
+2. 가족 공유: 냉장고 초대·가입·회원 관리.
+3. 요리 후 스마트 차감: 사용 재료·수량을 확인한 뒤 재고와 소비 이력에 반영한다.
+4. 마이페이지의 소비·폐기 이력 대시보드.
+5. AI 보관 위치 추천은 **먼 미래의 후보**로 보류한다.
+
+첫 1시간 작업으로 영수증 사진 입력의 기본 흐름을 구현·검증했다. 사용자의 결과 컨펌과 커밋 승인에 따라 `codex/receipt-photo-import` 브랜치의 이번 로컬 커밋에 포함한다. 상세 범위와 검증 결과는 [기능 개발 기록](docs/feature-roadmap.md)을 따른다. 다음은 음성 자동 입력이며 입력 방식을 확인한 뒤 진행한다. 나머지 우선순위는 계획이며 전체 기능의 구현 승인을 뜻하지 않는다.
+
 # 기술 스택 (Tech Stack) - All Native (No Docker Policy)
 ## 1. Frontend (Native Process)
 - **Core:** React 18+, TypeScript, Vite
@@ -36,7 +46,7 @@
 # 주요 파이프라인 (Logic Flow)
 1. **Authentication:** OAuth를 통해 로그인한 사용자만 본인이 속한(RefrigeratorMember) 냉장고의 데이터에 접근 가능.
 2. **Zero-Storage Image Processing:** 영수증 등은 디스크 저장 없이 Base64 메모리 패스스루 방식으로 Gemini API에 전송 후 파기.
-3. **AI Auto-Categorization:** Gemini가 식재료 추출 시 보관함 타입(ROOM/FRIDGE/FREEZER)을 예측하여 최적의 보관함을 추천.
+3. **AI Auto-Categorization (먼 미래로 보류):** Gemini가 식재료 추출 시 보관함 타입(ROOM/FRIDGE/FREEZER)을 예측하여 최적의 보관함을 추천하는 장기 구상. 현재 개발 범위에서는 사용자가 보관함을 직접 선택한다.
 4. **Hyper-Personalized Recipe:** - 사용자의 `UserPreference`(알러지 제외, 보유 도구 활용)와 냉장고의 유통기한 임박 재료를 결합하여 LangGraph 기반으로 Gemini에게 프롬프팅.
 5. **Smart Deduction (스마트 차감):** 요리 완료 시 AI가 차감할 식재료/수량 제안 -> 사용자가 UI에서 확인/수정(`+`, `-`) 후 DB 최종 반영.
 

@@ -62,15 +62,15 @@ def check_limits(
     violations: list[tuple[datetime, str, str]] = []
 
     for rows, limit, start, reset, code, message in (
-        (own, USER_RPD, user_start, user_reset, "user_daily_limit", "오늘의 레시피 추천 횟수를 모두 사용했습니다."),
-        (attempts, APP_RPD, app_start, app_reset, "app_daily_limit", "앱 전체의 오늘 레시피 추천 한도에 도달했습니다."),
+        (own, USER_RPD, user_start, user_reset, "user_daily_limit", "오늘의 AI 사용 횟수를 모두 사용했습니다. 영수증 인식과 레시피 추천은 한도를 공유합니다."),
+        (attempts, APP_RPD, app_start, app_reset, "app_daily_limit", "앱 전체의 오늘 AI 사용 한도에 도달했습니다."),
     ):
         if sum(start <= row.started_at < reset for row in rows) >= limit:
             violations.append((reset, code, message))
 
     for rows, limit, code, message in (
-        (own, USER_RPM, "user_minute_limit", "짧은 시간에 추천을 여러 번 요청했습니다."),
-        (attempts, APP_RPM, "app_minute_limit", "현재 추천 요청이 많습니다. 잠시 후 다시 시도해 주세요."),
+        (own, USER_RPM, "user_minute_limit", "짧은 시간에 AI를 여러 번 요청했습니다. 잠시 후 다시 시도해 주세요."),
+        (attempts, APP_RPM, "app_minute_limit", "현재 AI 요청이 많습니다. 잠시 후 다시 시도해 주세요."),
     ):
         starts = sorted(row.started_at for row in rows if row.started_at > now - WINDOW)
         if len(starts) >= limit:
@@ -83,7 +83,7 @@ def check_limits(
     if any(row.finished_at is None and row.lease_expires_at > now for row in own):
         # Completion may happen sooner than lease expiry; don't invent an exact wait.
         raise RecipeRateLimitError(
-            "user_request_in_progress", "이미 레시피를 만들고 있습니다. 완료 후 다시 요청해 주세요."
+            "user_request_in_progress", "이미 AI 요청을 처리하고 있습니다. 완료 후 다시 요청해 주세요."
         )
 
 

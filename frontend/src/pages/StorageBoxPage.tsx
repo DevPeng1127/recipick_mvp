@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useIngredientStore } from '../stores/useIngredientStore'
 import IngredientForm from '../components/ingredient/IngredientForm'
 import IngredientList from '../components/ingredient/IngredientList'
 import EditIngredientModal from '../components/ingredient/EditIngredientModal'
 import ConsumeDisposeDialog from '../components/ingredient/ConsumeDisposeDialog'
+import ReceiptImportPanel from '../components/ingredient/ReceiptImportPanel'
+import { createIngredientsBatch } from '../api/receiptImport'
+import { useToastStore } from '../stores/useToastStore'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import type { Ingredient, ConsumeDisposeRequest } from '../types/ingredient'
@@ -15,6 +18,7 @@ export default function StorageBoxPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const storageBoxId = Number(id)
+  const currentBox = useRef(storageBoxId)
 
   const {
     ingredients,
@@ -30,9 +34,13 @@ export default function StorageBoxPage() {
   const [editTarget, setEditTarget] = useState<Ingredient | null>(null)
   const [consumeDisposeTarget, setConsumeDisposeTarget] = useState<Ingredient | null>(null)
   const [actionType, setActionType] = useState<ActionType>('consume')
+  const [receiptOpen, setReceiptOpen] = useState(false)
 
   useEffect(() => {
+    currentBox.current = storageBoxId
+    setReceiptOpen(false)
     fetchByStorageBox(storageBoxId)
+    return () => { currentBox.current = NaN }
   }, [storageBoxId, fetchByStorageBox])
 
   const handleConsume = (ingredient: Ingredient) => {
@@ -72,6 +80,20 @@ export default function StorageBoxPage() {
 
       {!error && (
         <>
+          {!receiptOpen && (
+            <button type="button" onClick={() => setReceiptOpen(true)}
+              className="mb-4 rounded-lg border border-purple-300 bg-purple-50 px-4 py-2 text-purple-700 hover:bg-purple-100">
+              영수증으로 등록
+            </button>
+          )}
+          {receiptOpen && <ReceiptImportPanel key={storageBoxId} storageBoxId={storageBoxId}
+            onClose={() => { setReceiptOpen(false); void fetchByStorageBox(storageBoxId) }}
+            onSave={async items => {
+              const created = await createIngredientsBatch(storageBoxId, items)
+              if (currentBox.current !== storageBoxId) return
+              useIngredientStore.setState(state => ({ ingredients: [...state.ingredients, ...created] }))
+              useToastStore.getState().addToast('success', `${created.length}개 식재료가 등록되었습니다.`)
+            }} />}
           <div className="mb-4">
             <IngredientForm
               onSubmit={async (data) => {

@@ -1,4 +1,5 @@
 import asyncio
+import base64
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
@@ -41,18 +42,37 @@ def provider_rate_limit(response: httpx.Response) -> RecipeRateLimitError:
 
 
 async def call_gemini(prompt: str, *, user_id: int) -> str:
+    return await _generate_content([{"text": prompt}], user_id=user_id)
+
+
+async def call_gemini_image(
+    prompt: str, image: bytes, *, user_id: int, response_schema: dict,
+) -> str:
+    return await _generate_content(
+        [{"text": prompt}, {"inlineData": {
+            "mimeType": "image/jpeg", "data": base64.b64encode(image).decode("ascii"),
+        }}],
+        user_id=user_id,
+        generation_config={"responseMimeType": "application/json", "responseJsonSchema": response_schema},
+    )
+
+
+async def _generate_content(
+    parts: list[dict], *, user_id: int, generation_config: dict | None = None,
+) -> str:
     api_key = settings.GEMINI_API_KEY.get_secret_value()
     if not api_key.strip():
         raise ValueError("Gemini API key is not configured")
     url = f"{GEMINI_API_URL}/{settings.GEMINI_MODEL}:generateContent"
 
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
+        "contents": [{"parts": parts}],
         "generationConfig": {
             # Gemini 3 recommends 1.0; leave thinking at the model default
             # (minimal for Gemini 3.5 Flash-Lite).
             "temperature": 1.0,
             "maxOutputTokens": 2048,
+            **(generation_config or {}),
         },
     }
 

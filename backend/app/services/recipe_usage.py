@@ -62,7 +62,7 @@ def check_limits(
     violations: list[tuple[datetime, str, str]] = []
 
     for rows, limit, start, reset, code, message in (
-        (own, USER_RPD, user_start, user_reset, "user_daily_limit", "오늘의 AI 사용 횟수를 모두 사용했습니다. 영수증 인식과 레시피 추천은 한도를 공유합니다."),
+        (own, USER_RPD, user_start, user_reset, "user_daily_limit", "오늘의 AI 사용 횟수를 모두 사용했습니다. 영수증·음성 인식과 레시피 추천은 한도를 공유합니다."),
         (attempts, APP_RPD, app_start, app_reset, "app_daily_limit", "앱 전체의 오늘 AI 사용 한도에 도달했습니다."),
     ):
         if sum(start <= row.started_at < reset for row in rows) >= limit:

@@ -89,7 +89,7 @@ async def test_invalid_upload_never_calls_ai(transactional_client, inventory_ses
     assert await snapshot(inventory_sessions) == before
 
 
-async def test_receipt_and_recipe_share_real_database_quota(
+async def test_receipt_voice_and_recipe_share_real_database_quota(
     transactional_client, inventory_sessions, monkeypatch,
 ):
     import httpx
@@ -97,14 +97,15 @@ async def test_receipt_and_recipe_share_real_database_quota(
     from app.ai import gemini_client
     from app.services.recipe_usage import recipe_usage_limiter
     from app.models.recipe_usage import RecipeUsageAttempt
+    from tests.unit.test_voice_import import recording
     requests = []
     client_type = httpx.AsyncClient
 
     def respond(request):
         requests.append(request)
         body = json.loads(request.content)
-        is_image = any("inlineData" in part for part in body["contents"][0]["parts"])
-        answer = json.dumps(receipt()) if is_image else "추천 레시피"
+        is_import = any("inlineData" in part for part in body["contents"][0]["parts"])
+        answer = json.dumps(receipt()) if is_import else "추천 레시피"
         return httpx.Response(200, json={"candidates": [{
             "finishReason": "STOP", "content": {"parts": [{"text": answer}]},
         }]})
@@ -116,7 +117,9 @@ async def test_receipt_and_recipe_share_real_database_quota(
     response = await transactional_client.post(f"{BASE}/receipt-preview", content=picture(),
                                               headers={**auth_headers(1), "Content-Type": "image/png"})
     assert response.status_code == 200, response.text
-    await gemini_client.call_gemini("recipe", user_id=1)
+    voice = await transactional_client.post(f"{BASE}/voice-preview", content=recording(),
+                                           headers={**auth_headers(1), "Content-Type": "audio/wav"})
+    assert voice.status_code == 200
     limited = await transactional_client.post(f"{BASE}/receipt-preview", content=picture(),
                                              headers={**auth_headers(1), "Content-Type": "image/png"})
     assert limited.status_code == 429
@@ -125,6 +128,9 @@ async def test_receipt_and_recipe_share_real_database_quota(
     payload = json.loads(requests[1].content)
     assert payload["generationConfig"]["responseMimeType"] == "application/json"
     assert payload["contents"][0]["parts"][1]["inlineData"]["mimeType"] == "image/jpeg"
+    voice_payload = json.loads(requests[2].content)
+    assert voice_payload["contents"][0]["parts"][1]["inlineData"]["mimeType"] == "audio/wav"
+    assert voice_payload["generationConfig"]["responseMimeType"] == "application/json"
     async with inventory_sessions() as db:
         attempts = list((await db.scalars(select(RecipeUsageAttempt))).all())
         assert len(attempts) == 3 and all(row.finished_at is not None for row in attempts)

@@ -57,6 +57,18 @@ async def call_gemini_image(
     )
 
 
+async def call_gemini_audio(
+    prompt: str, audio: bytes, *, user_id: int, response_schema: dict,
+) -> str:
+    return await _generate_content(
+        [{"text": prompt}, {"inlineData": {
+            "mimeType": "audio/wav", "data": base64.b64encode(audio).decode("ascii"),
+        }}],
+        user_id=user_id,
+        generation_config={"responseMimeType": "application/json", "responseJsonSchema": response_schema},
+    )
+
+
 async def _generate_content(
     parts: list[dict], *, user_id: int, generation_config: dict | None = None,
 ) -> str:

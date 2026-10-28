@@ -5,7 +5,7 @@ import IngredientForm from '../components/ingredient/IngredientForm'
 import IngredientList from '../components/ingredient/IngredientList'
 import EditIngredientModal from '../components/ingredient/EditIngredientModal'
 import ConsumeDisposeDialog from '../components/ingredient/ConsumeDisposeDialog'
-import ReceiptImportPanel from '../components/ingredient/ReceiptImportPanel'
+import IngredientImportPanel from '../components/ingredient/IngredientImportPanel'
 import { createIngredientsBatch } from '../api/receiptImport'
 import { useToastStore } from '../stores/useToastStore'
 import LoadingSpinner from '../components/common/LoadingSpinner'
@@ -34,11 +34,11 @@ export default function StorageBoxPage() {
   const [editTarget, setEditTarget] = useState<Ingredient | null>(null)
   const [consumeDisposeTarget, setConsumeDisposeTarget] = useState<Ingredient | null>(null)
   const [actionType, setActionType] = useState<ActionType>('consume')
-  const [receiptOpen, setReceiptOpen] = useState(false)
+  const [importMode, setImportMode] = useState<'receipt' | 'voice' | null>(null)
 
   useEffect(() => {
     currentBox.current = storageBoxId
-    setReceiptOpen(false)
+    setImportMode(null)
     fetchByStorageBox(storageBoxId)
     return () => { currentBox.current = NaN }
   }, [storageBoxId, fetchByStorageBox])
@@ -80,14 +80,20 @@ export default function StorageBoxPage() {
 
       {!error && (
         <>
-          {!receiptOpen && (
-            <button type="button" onClick={() => setReceiptOpen(true)}
-              className="mb-4 rounded-lg border border-purple-300 bg-purple-50 px-4 py-2 text-purple-700 hover:bg-purple-100">
-              영수증으로 등록
-            </button>
+          {!importMode && (
+            <div className="mb-4 flex flex-wrap gap-3">
+              <button type="button" onClick={() => setImportMode('receipt')}
+                className="rounded-lg border border-purple-300 bg-purple-50 px-4 py-2 text-purple-700 hover:bg-purple-100">
+                영수증으로 등록
+              </button>
+              <button type="button" onClick={() => setImportMode('voice')}
+                className="rounded-lg border border-purple-300 bg-purple-50 px-4 py-2 text-purple-700 hover:bg-purple-100">
+                음성으로 등록
+              </button>
+            </div>
           )}
-          {receiptOpen && <ReceiptImportPanel key={storageBoxId} storageBoxId={storageBoxId}
-            onClose={() => { setReceiptOpen(false); void fetchByStorageBox(storageBoxId) }}
+          {importMode && <IngredientImportPanel key={`${storageBoxId}-${importMode}`} mode={importMode} storageBoxId={storageBoxId}
+            onClose={() => { setImportMode(null); void fetchByStorageBox(storageBoxId) }}
             onSave={async items => {
               const created = await createIngredientsBatch(storageBoxId, items)
               if (currentBox.current !== storageBoxId) return

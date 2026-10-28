@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -28,11 +29,37 @@ function limited(message: string, retryAt: string | null = null) {
 }
 
 describe('Recipe rate limits through page and store', () => {
+  it('restores the current cooking plan when returning through the recipes link', async () => {
+    useRecipeStore.setState({ recipe: '이전 레시피', planId: 'saved-plan' })
+    vi.mocked(recipeApi.getCookingPreview).mockResolvedValue({
+      plan_id: 'saved-plan', title: '저장된 요리', recipe: '서버 레시피', servings: 1,
+      requirements: [], stock: [], suggestions: [], applied_at: null, result: null,
+    })
+    render(<MemoryRouter initialEntries={['/recipes']}><RecipePage /></MemoryRouter>)
+    expect(await screen.findByRole('button', { name: '요리 완료 · 사용 재료 확인' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: '저장된 요리' })).toBeVisible()
+    expect(recipeApi.getCookingPreview).toHaveBeenCalledWith('saved-plan')
+    expect(recipeApi.recommendRecipe).not.toHaveBeenCalled()
+  })
+
+  it('defaults to one serving and sends the selected serving count', async () => {
+    vi.mocked(recipeApi.recommendRecipe).mockResolvedValue({ recipe: '추천 내용' })
+    render(<MemoryRouter><RecipePage /></MemoryRouter>)
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /테스트 냉장고/ }))
+    expect(screen.getByLabelText('인분')).toHaveValue('1')
+    await user.click(screen.getByRole('button', { name: /AI 레시피 추천받기/ }))
+    await waitFor(() => expect(recipeApi.recommendRecipe).toHaveBeenCalledWith([10], 1))
+    await user.selectOptions(screen.getByLabelText('인분'), '8')
+    await user.click(screen.getByRole('button', { name: /AI 레시피 추천받기/ }))
+    await waitFor(() => expect(recipeApi.recommendRecipe).toHaveBeenLastCalledWith([10], 8))
+  })
+
   it('shows the reason and Korean retry time, then allows a manual retry', async () => {
     vi.mocked(recipeApi.recommendRecipe)
       .mockRejectedValueOnce(limited('오늘의 레시피 추천 횟수를 모두 사용했습니다.', '2026-10-19T15:00:00Z'))
       .mockResolvedValueOnce({ recipe: '## 두부 구이\n맛있는 레시피입니다.' })
-    render(<RecipePage />)
+    render(<MemoryRouter><RecipePage /></MemoryRouter>)
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /테스트 냉장고/ }))
     await user.click(screen.getByRole('button', { name: /AI 레시피 추천받기/ }))

@@ -1,3 +1,5 @@
+from uuid import UUID
+from app.schemas.recipe import GeneratedRecipe
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -45,7 +47,10 @@ def recipe_context(monkeypatch):
         db.execute.side_effect = session.execute
         ingredients = AsyncMock(return_value=[make_ingredient()])
         preference = AsyncMock(return_value=None)
-        ai = AsyncMock(return_value="Test recipe")
+        ai = AsyncMock(return_value=GeneratedRecipe(title="Test recipe", recipe="Test recipe",
+            requirements=[{"ingredient_name": "두부", "quantity": 1, "unit": "개"}]))
+        plans = AsyncMock(return_value=SimpleNamespace(id=UUID("00000000-0000-0000-0000-000000000001")))
+        monkeypatch.setattr(recipe_service, "create_plan", plans)
         monkeypatch.setattr(recipe_service, "list_ingredients_by_refrigerator", ingredients)
         monkeypatch.setattr(recipe_service, "get_user_preference", preference)
         monkeypatch.setattr(recipe_service, "run_recipe_graph", ai)
@@ -103,12 +108,12 @@ async def test_allows_owned_and_shared_refrigerators(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"recipe": "Test recipe"}
+    assert response.json() == {"recipe": "Test recipe", "plan_id": "00000000-0000-0000-0000-000000000001"}
     assert {
         call.args[0] for call in recipe_context.ingredients.await_args_list
     } == set(refrigerator_ids)
     recipe_context.ai.assert_awaited_once()
-    assert recipe_context.ai.await_args.kwargs == {"user_id": 1}
+    assert recipe_context.ai.await_args.kwargs == {"user_id": 1, "servings": 1}
     recipe_context.db.commit.assert_awaited_once()
 
 

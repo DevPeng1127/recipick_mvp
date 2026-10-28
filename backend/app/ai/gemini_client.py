@@ -41,8 +41,10 @@ def provider_rate_limit(response: httpx.Response) -> RecipeRateLimitError:
     )
 
 
-async def call_gemini(prompt: str, *, user_id: int) -> str:
-    return await _generate_content([{"text": prompt}], user_id=user_id)
+async def call_gemini(prompt: str, *, user_id: int, response_schema: dict | None = None) -> str:
+    config = ({"responseMimeType": "application/json", "responseJsonSchema": response_schema}
+              if response_schema else None)
+    return await _generate_content([{"text": prompt}], user_id=user_id, generation_config=config)
 
 
 async def call_gemini_image(

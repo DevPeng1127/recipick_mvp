@@ -60,16 +60,18 @@ def completed_response(parts):
 async def test_recipe_graph_calls_flash_lite_and_returns_complete_recipe(mock_gemini, caplog):
     caplog.set_level(logging.INFO, logger="httpx")
     recipe = "## 두부 구이\n\n1. 두부를 썰어 굽습니다."
+    encoded = json.dumps({"title": "두부 구이", "recipe": recipe,
+                          "requirements": [{"ingredient_name": "두부", "quantity": 1, "unit": "개"}]})
     requests = mock_gemini(httpx.Response(200, json=completed_response([
-        {"text": "## 두부 구이\n\n"},
-        {"text": "1. 두부를 썰어 굽습니다.", "thoughtSignature": "opaque-signature"},
+        {"text": encoded[:40]}, {"text": encoded[40:], "thoughtSignature": "opaque-signature"},
     ])))
     ingredients = [make_ingredient(name="두부", quantity=1)]
     preference = make_user_preference(allergies=["땅콩"], max_time=30)
 
     result = await run_recipe_graph(ingredients, preference, user_id=1)
 
-    assert result == recipe
+    assert result.recipe == recipe
+    assert result.requirements[0].quantity == 1
     assert len(requests) == 1
     request = requests[0]
     assert request.method == "POST"
@@ -86,6 +88,7 @@ async def test_recipe_graph_calls_flash_lite_and_returns_complete_recipe(mock_ge
     assert "땅콩" in prompt
     assert "30분" in prompt
     assert payload["generationConfig"]["temperature"] == 1.0
+    assert payload["generationConfig"]["responseMimeType"] == "application/json"
     assert payload["generationConfig"]["maxOutputTokens"] == 2048
     assert "thinkingConfig" not in payload["generationConfig"]
     assert request.extensions["timeout"]["read"] == 30.0

@@ -4,9 +4,10 @@ import { recommendRecipe } from '../api/recipes'
 
 interface RecipeState {
   recipe: string
+  planId: string | null
   isLoading: boolean
   error: string | null
-  fetchRecipe: (refrigeratorIds: number[]) => Promise<void>
+  fetchRecipe: (refrigeratorIds: number[], servings?: number) => Promise<void>
   clearRecipe: () => void
 }
 
@@ -33,21 +34,22 @@ function recommendationError(error: unknown): string {
 
 export const useRecipeStore = create<RecipeState>((set, get) => ({
   recipe: '',
+  planId: null,
   isLoading: false,
   error: null,
 
-  fetchRecipe: async (refrigeratorIds: number[]) => {
+  fetchRecipe: async (refrigeratorIds: number[], servings = 1) => {
     if (get().isLoading) return
-    set({ isLoading: true, error: null, recipe: '' })
+    set({ isLoading: true, error: null, recipe: '', planId: null })
     try {
-      const data = await recommendRecipe(refrigeratorIds)
-      set({ recipe: data.recipe, isLoading: false })
+      const data = await recommendRecipe(refrigeratorIds, servings)
+      set({ recipe: data.recipe, planId: data.plan_id ?? null, isLoading: false })
     } catch (error) {
       set({ error: recommendationError(error), isLoading: false })
     }
   },
 
   clearRecipe: () => {
-    set({ recipe: '', error: null })
+    set({ recipe: '', planId: null, error: null })
   },
 }))

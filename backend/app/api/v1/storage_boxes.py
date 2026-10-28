@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
-from app.dependencies.auth import require_refrigerator_member
+from app.dependencies.auth import require_refrigerator_member, require_refrigerator_owner
 from app.models.refrigerator import RefrigeratorMember
 from app.schemas.refrigerator import ReorderRequest
 from app.schemas.storage import StorageBoxCreate, StorageBoxResponse, StorageBoxUpdate
@@ -33,7 +33,7 @@ async def list_boxes(
 async def create_box(
     refrigerator_id: int,
     data: StorageBoxCreate,
-    member: RefrigeratorMember = Depends(require_refrigerator_member),
+    member: RefrigeratorMember = Depends(require_refrigerator_owner),
     db: AsyncSession = Depends(get_db),
 ):
     return await create_storage_box(refrigerator_id, data, db)
@@ -43,7 +43,7 @@ async def create_box(
 async def reorder_boxes(
     refrigerator_id: int,
     data: ReorderRequest,
-    member: RefrigeratorMember = Depends(require_refrigerator_member),
+    member: RefrigeratorMember = Depends(require_refrigerator_owner),
     db: AsyncSession = Depends(get_db),
 ):
     await reorder_storage_boxes(refrigerator_id, data.ordered_ids, db)
@@ -54,7 +54,7 @@ async def update_box(
     refrigerator_id: int,
     storage_box_id: int,
     data: StorageBoxUpdate,
-    member: RefrigeratorMember = Depends(require_refrigerator_member),
+    member: RefrigeratorMember = Depends(require_refrigerator_owner),
     db: AsyncSession = Depends(get_db),
 ):
     box = await update_storage_box(storage_box_id, refrigerator_id, data, db)
@@ -67,7 +67,7 @@ async def update_box(
 async def delete_box(
     refrigerator_id: int,
     storage_box_id: int,
-    member: RefrigeratorMember = Depends(require_refrigerator_member),
+    member: RefrigeratorMember = Depends(require_refrigerator_owner),
     db: AsyncSession = Depends(get_db),
 ):
     deleted = await delete_storage_box(storage_box_id, refrigerator_id, db)

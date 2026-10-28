@@ -9,9 +9,9 @@ from app.schemas.refrigerator import RefrigeratorCreate, RefrigeratorUpdate
 
 async def list_refrigerators(
     user_id: int, db: AsyncSession
-) -> list[tuple[Refrigerator, bool, int]]:
+) -> list[tuple[Refrigerator, bool, int, MemberRole]]:
     result = await db.execute(
-        select(Refrigerator, RefrigeratorMember.is_favorite, RefrigeratorMember.display_order)
+        select(Refrigerator, RefrigeratorMember.is_favorite, RefrigeratorMember.display_order, RefrigeratorMember.role)
         .join(RefrigeratorMember)
         .where(RefrigeratorMember.user_id == user_id)
         .options(
@@ -51,7 +51,7 @@ async def get_refrigerator_detail(
     result = await db.execute(
         select(Refrigerator)
         .options(
-            selectinload(Refrigerator.members),
+            selectinload(Refrigerator.members).selectinload(RefrigeratorMember.user),
             selectinload(Refrigerator.storage_boxes),
         )
         .where(Refrigerator.id == refrigerator_id)

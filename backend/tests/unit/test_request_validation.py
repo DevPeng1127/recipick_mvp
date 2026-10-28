@@ -78,7 +78,7 @@ async def validation_client(inventory):
     app.dependency_overrides.update({
         get_db: override_db,
         get_current_user: lambda: SimpleNamespace(id=1),
-        require_refrigerator_member: lambda: SimpleNamespace(user_id=1),
+        require_refrigerator_member: lambda: SimpleNamespace(user_id=1, role="OWNER"),
         require_storage_box_member: lambda: inventory.box,
     })
     try:

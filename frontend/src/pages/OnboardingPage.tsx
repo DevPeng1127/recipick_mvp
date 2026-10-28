@@ -1,3 +1,4 @@
+import { afterLoginPath, pendingInvitation } from '../utils/invitation'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { CookingSkill, UserPreferenceUpdate } from '../api/users'
@@ -47,8 +48,8 @@ export default function OnboardingPage() {
   const handleFinish = async () => {
     await updateNickname(nickname.trim())
     await savePreference(pref)
-    await addRefrigerator('우리집 냉장고')
-    navigate('/dashboard', { replace: true })
+    if (!pendingInvitation()) await addRefrigerator('우리집 냉장고')
+    navigate(afterLoginPath(), { replace: true })
   }
 
   const canAdvance = (): boolean => {

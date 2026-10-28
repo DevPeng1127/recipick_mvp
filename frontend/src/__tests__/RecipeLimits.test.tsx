@@ -15,7 +15,7 @@ beforeEach(() => {
   useRecipeStore.setState(useRecipeStore.getInitialState(), true)
   useRefrigeratorStore.setState(useRefrigeratorStore.getInitialState(), true)
   vi.mocked(fridgeApi.listRefrigerators).mockResolvedValue([{
-    id: 10, name: '테스트 냉장고', created_at: '', is_favorite: false,
+    id: 10, name: '테스트 냉장고', created_at: '', role: 'OWNER', is_favorite: false,
     top_ingredients: [], total_ingredient_count: 2,
   }])
 })

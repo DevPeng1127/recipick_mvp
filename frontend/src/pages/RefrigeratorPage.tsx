@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useRefrigeratorStore } from '../stores/useRefrigeratorStore'
 import { useStorageBoxStore } from '../stores/useStorageBoxStore'
 import StorageBoxCard from '../components/storage/StorageBoxCard'
@@ -45,12 +45,14 @@ export default function RefrigeratorPage() {
     fetchStorageBoxes(refrigeratorId)
   }, [refrigeratorId, fetchRefrigeratorDetail, fetchStorageBoxes])
 
+  const owner = currentRefrigerator?.id === refrigeratorId && currentRefrigerator.role === 'OWNER'
+
   if (fridgeLoading || boxLoading) return <LoadingSpinner />
   if (fridgeError) return <ErrorMessage message={fridgeError} />
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
         <div>
           <button
             onClick={() => navigate('/dashboard')}
@@ -62,7 +64,9 @@ export default function RefrigeratorPage() {
             {currentRefrigerator?.name}
           </h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link to={`/refrigerators/${refrigeratorId}/sharing`} className="px-4 py-2 border border-purple-300 text-purple-600 rounded-lg">가족 공유</Link>
+          {owner && <>
           <button
             onClick={() => setShowCreateBox(true)}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
@@ -75,6 +79,7 @@ export default function RefrigeratorPage() {
           >
             삭제
           </button>
+          </>}
         </div>
       </div>
 
@@ -82,9 +87,9 @@ export default function RefrigeratorPage() {
         <EmptyState
           icon="📦"
           title="보관함이 없습니다"
-          description="보관함을 추가하고 식재료를 넣어보세요"
+          description={owner ? "보관함을 추가하고 식재료를 넣어보세요" : "소유자가 보관함을 추가하면 식재료를 등록할 수 있습니다"}
         />
-      ) : (
+      ) : owner ? (
         <SortableContainer
           items={storageBoxes}
           onReorder={(orderedIds) => reorderStorageBoxes(refrigeratorId, orderedIds)}
@@ -97,6 +102,10 @@ export default function RefrigeratorPage() {
             />
           )}
         />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {storageBoxes.map(box => <StorageBoxCard key={box.id} storageBox={box} />)}
+        </div>
       )}
 
       <CreateStorageBoxModal

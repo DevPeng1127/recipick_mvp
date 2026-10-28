@@ -1,3 +1,4 @@
+import { afterLoginPath } from '../utils/invitation'
 import { Navigate } from 'react-router-dom'
 import KakaoLoginButton from '../components/auth/KakaoLoginButton'
 import GoogleLoginButton from '../components/auth/GoogleLoginButton'
@@ -7,7 +8,7 @@ export default function LoginPage() {
   const { isAuthenticated } = useAuthStore()
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={afterLoginPath()} replace />
   }
 
   return (

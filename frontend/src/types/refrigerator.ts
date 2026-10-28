@@ -18,6 +18,7 @@ export interface Refrigerator {
   id: number
   name: string
   created_at: string
+  role: MemberRole
   is_favorite: boolean
   top_ingredients: IngredientBrief[]
   total_ingredient_count: number

@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
-from app.models.refrigerator import RefrigeratorMember
+from app.models.refrigerator import MemberRole, RefrigeratorMember
 from app.models.storage import StorageBox
 from app.models.user import User
 from app.utils.security import decode_token
@@ -86,3 +86,11 @@ async def require_storage_box_member(
             detail="Not a member of this refrigerator",
         )
     return storage_box
+
+
+async def require_refrigerator_owner(
+    member: RefrigeratorMember = Depends(require_refrigerator_member),
+) -> RefrigeratorMember:
+    if member.role != MemberRole.OWNER:
+        raise HTTPException(403, "소유자만 변경할 수 있습니다.")
+    return member

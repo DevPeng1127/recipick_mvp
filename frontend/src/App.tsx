@@ -7,6 +7,8 @@ import AppLayout from './components/layout/AppLayout'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import ToastContainer from './components/common/ToastContainer'
 
+import SharingPage from './pages/SharingPage'
+import InvitationPage from './pages/InvitationPage'
 import LoginPage from './pages/LoginPage'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
 import OnboardingPage from './pages/OnboardingPage'
@@ -29,6 +31,7 @@ function App() {
       <ErrorBoundary>
         <Routes>
           {/* Public routes */}
+          <Route path="/invite" element={<InvitationPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/oauth/:provider/callback" element={<OAuthCallbackPage />} />
 
@@ -39,6 +42,7 @@ function App() {
 
           <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/refrigerators/:id/sharing" element={<SharingPage />} />
             <Route path="/refrigerators/:id" element={<RefrigeratorPage />} />
             <Route path="/storage-boxes/:id" element={<StorageBoxPage />} />
             <Route path="/recipes" element={<RecipePage />} />

@@ -2,13 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
-from app.dependencies.auth import get_current_user, require_refrigerator_member
+from app.dependencies.auth import get_current_user, require_refrigerator_member, require_refrigerator_owner
 from app.models.refrigerator import RefrigeratorMember
 from app.models.user import User
 from app.schemas.refrigerator import (
     RefrigeratorCreate,
     RefrigeratorDetailResponse,
     RefrigeratorListResponse,
+    RefrigeratorMemberResponse,
     RefrigeratorResponse,
     RefrigeratorUpdate,
     ReorderRequest,
@@ -33,7 +34,7 @@ async def list_my_refrigerators(
 ):
     rows = await list_refrigerators(current_user.id, db)
     results = []
-    for fridge, is_favorite, _display_order in rows:
+    for fridge, is_favorite, _display_order, role in rows:
         all_ingredients = []
         for box in fridge.storage_boxes:
             all_ingredients.extend(box.ingredients)
@@ -48,6 +49,7 @@ async def list_my_refrigerators(
             name=fridge.name,
             created_at=fridge.created_at,
             is_favorite=is_favorite,
+            role=role,
             top_ingredients=top,
             total_ingredient_count=len(all_ingredients),
         ))
@@ -81,14 +83,19 @@ async def get_refrigerator(
     refrigerator = await get_refrigerator_detail(refrigerator_id, db)
     if refrigerator is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Refrigerator not found")
-    return refrigerator
+    return RefrigeratorDetailResponse(
+        id=refrigerator.id, name=refrigerator.name, created_at=refrigerator.created_at,
+        role=member.role, storage_boxes=refrigerator.storage_boxes,
+        members=[RefrigeratorMemberResponse(id=m.id, user_id=m.user_id, role=m.role,
+                                             nickname=m.user.nickname) for m in refrigerator.members],
+    )
 
 
 @router.put("/{refrigerator_id}", response_model=RefrigeratorResponse)
 async def update_refrigerator_endpoint(
     refrigerator_id: int,
     data: RefrigeratorUpdate,
-    member: RefrigeratorMember = Depends(require_refrigerator_member),
+    member: RefrigeratorMember = Depends(require_refrigerator_owner),
     db: AsyncSession = Depends(get_db),
 ):
     refrigerator = await update_refrigerator(refrigerator_id, data, db)

@@ -131,8 +131,8 @@ export default function DashboardPage() {
           renderItem={(fridge) => (
             <RefrigeratorCard
               refrigerator={fridge}
-              onEdit={() => setEditTarget(fridge)}
-              onDelete={() => setDeleteTarget(fridge)}
+              onEdit={fridge.role === 'OWNER' ? () => setEditTarget(fridge) : undefined}
+              onDelete={fridge.role === 'OWNER' ? () => setDeleteTarget(fridge) : undefined}
               onToggleFavorite={() => toggleFavorite(fridge.id)}
             />
           )}

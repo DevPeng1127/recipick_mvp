@@ -25,6 +25,7 @@ class RefrigeratorMemberResponse(BaseModel):
 
 
 class RefrigeratorResponse(BaseModel):
+    role: MemberRole = MemberRole.OWNER
     id: int
     name: str
     created_at: datetime
@@ -36,6 +37,7 @@ class RefrigeratorListResponse(BaseModel):
     id: int
     name: str
     created_at: datetime
+    role: MemberRole
     is_favorite: bool = False
     top_ingredients: list[IngredientBriefResponse] = []
     total_ingredient_count: int = 0
@@ -51,6 +53,7 @@ class RefrigeratorDetailResponse(BaseModel):
     id: int
     name: str
     created_at: datetime
+    role: MemberRole
     members: list[RefrigeratorMemberResponse] = []
     storage_boxes: list["StorageBoxResponse"] = []
 

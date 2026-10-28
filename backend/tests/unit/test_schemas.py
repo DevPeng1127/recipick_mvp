@@ -96,6 +96,7 @@ class TestIngredientSchemas:
 class TestRefrigeratorListResponse:
     def test_serializes_with_empty_ingredients(self):
         schema = RefrigeratorListResponse(
+            role="OWNER",
             id=1,
             name="우리집 냉장고",
             created_at="2026-01-01T00:00:00",
@@ -107,6 +108,7 @@ class TestRefrigeratorListResponse:
 
     def test_serializes_with_top_ingredients(self):
         schema = RefrigeratorListResponse(
+            role="OWNER",
             id=1,
             name="우리집 냉장고",
             created_at="2026-01-01T00:00:00",
@@ -123,6 +125,7 @@ class TestRefrigeratorListResponse:
 
     def test_serializes_with_is_favorite_true(self):
         schema = RefrigeratorListResponse(
+            role="OWNER",
             id=1,
             name="즐겨찾는 냉장고",
             created_at="2026-01-01T00:00:00",
@@ -134,6 +137,7 @@ class TestRefrigeratorListResponse:
 
     def test_serializes_with_is_favorite_default(self):
         schema = RefrigeratorListResponse(
+            role="OWNER",
             id=1,
             name="일반 냉장고",
             created_at="2026-01-01T00:00:00",

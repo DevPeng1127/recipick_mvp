@@ -1,3 +1,4 @@
+import { afterLoginPath } from '../utils/invitation'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -38,7 +39,7 @@ export default function OAuthCallbackPage() {
         if (pref === null) {
           navigate('/onboarding', { replace: true })
         } else {
-          navigate('/dashboard', { replace: true })
+          navigate(afterLoginPath(), { replace: true })
         }
       })
       .catch(() => setError('로그인에 실패했습니다.'))

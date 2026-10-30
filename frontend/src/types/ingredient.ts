@@ -25,3 +25,10 @@ export interface ConsumeDisposeRequest {
   quantity?: number | null
   memo?: string | null
 }
+
+export type BulkIngredientAction = 'delete' | 'dispose'
+export interface BulkIngredientActionRequest {
+  action: BulkIngredientAction
+  items: Omit<Ingredient, 'storage_box_id'>[]
+  memo?: string | null
+}

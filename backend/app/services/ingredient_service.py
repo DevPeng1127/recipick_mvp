@@ -5,7 +5,7 @@ from app.models.ingredient import Ingredient
 from app.models.ingredient_log import ActionType, IngredientLog
 from app.models.refrigerator import Refrigerator, RefrigeratorMember
 from app.models.storage import StorageBox
-from app.schemas.ingredient import ConsumeDisposeRequest, IngredientCreate, IngredientSearchResult, IngredientUpdate
+from app.schemas.ingredient import BulkIngredientActionRequest, ConsumeDisposeRequest, IngredientCreate, IngredientSearchResult, IngredientUpdate
 
 
 async def list_ingredients_by_storage_box(
@@ -63,6 +63,49 @@ async def update_ingredient(
 
     await db.flush()
     return ingredient
+
+
+async def delete_ingredient(ingredient_id: int, storage_box_id: int, db: AsyncSession) -> None:
+    # Serialize with consume/dispose and smart deduction; history is independent.
+    ingredient = await db.scalar(select(Ingredient).where(
+        Ingredient.id == ingredient_id,
+        Ingredient.storage_box_id == storage_box_id,
+    ).with_for_update())
+    if ingredient is not None:
+        await db.delete(ingredient)
+        await db.flush()
+
+
+async def bulk_action_ingredients(
+    storage_box_id: int, user_id: int, refrigerator: Refrigerator,
+    data: BulkIngredientActionRequest, db: AsyncSession,
+) -> None:
+    expected = {item.id: item for item in data.items}
+    ingredients = list((await db.scalars(
+        select(Ingredient).where(
+            Ingredient.storage_box_id == storage_box_id,
+            Ingredient.id.in_(expected),
+        ).order_by(Ingredient.id).with_for_update().execution_options(populate_existing=True)
+    )).all())
+    # Validate every target before writing anything. A retry after a lost success
+    # sees missing IDs and cannot create a second disposal record.
+    fields = ("name", "quantity", "unit", "expiry_date")
+    if len(ingredients) != len(expected) or any(
+        any(getattr(item, field) != getattr(expected[item.id], field) for field in fields)
+        for item in ingredients
+    ):
+        raise ValueError("inventory_changed")
+    for item in ingredients:
+        if data.action == "dispose":
+            db.add(IngredientLog(
+                user_id=user_id, refrigerator_id=refrigerator.id,
+                refrigerator_name=refrigerator.name, ingredient_id=item.id,
+                action_type=ActionType.DISPOSED, ingredient_name=item.name,
+                quantity=item.quantity, unit=item.unit, expiry_date=item.expiry_date,
+                memo=data.memo.strip() or None if data.memo else None,
+            ))
+        await db.delete(item)
+    await db.flush()
 
 
 

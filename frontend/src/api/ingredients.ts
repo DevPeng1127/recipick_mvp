@@ -1,4 +1,4 @@
-import type { ConsumeDisposeRequest, Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
+import type { BulkIngredientActionRequest, ConsumeDisposeRequest, Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
 import type { StorageType } from '../types/storage'
 import client from './client'
 
@@ -60,6 +60,17 @@ export const updateIngredient = async (
     body
   )
   return data
+}
+
+export const deleteIngredient = async (storageBoxId: number, ingredientId: number): Promise<void> => {
+  await client.delete(`/storage-boxes/${storageBoxId}/ingredients/${ingredientId}`)
+}
+
+export const bulkIngredientAction = async (
+  storageBoxId: number,
+  body: BulkIngredientActionRequest
+): Promise<void> => {
+  await client.post(`/storage-boxes/${storageBoxId}/ingredients/bulk-action`, body)
 }
 
 export const consumeIngredient = async (

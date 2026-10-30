@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 from pydantic.json_schema import SkipJsonSchema
@@ -57,6 +57,28 @@ class IngredientResponse(BaseModel):
 class ConsumeDisposeRequest(BaseModel):
     quantity: PositiveQuantity | None = None  # null = 전량
     memo: str | None = None
+
+
+class BulkIngredientTarget(BaseModel):
+    """The stock the user reviewed, used to reject a stale confirmation."""
+    id: Annotated[int, Field(gt=0, strict=True)]
+    name: ResourceName
+    quantity: PositiveQuantity
+    unit: IngredientUnit
+    expiry_date: date | None
+
+
+class BulkIngredientActionRequest(BaseModel):
+    action: Literal["delete", "dispose"]
+    items: list[BulkIngredientTarget] = Field(min_length=1, max_length=100)
+    memo: str | None = Field(default=None, max_length=500)
+
+    @field_validator("items")
+    @classmethod
+    def unique_items(cls, items):
+        if len({item.id for item in items}) != len(items):
+            raise ValueError("Duplicate ingredient IDs are not allowed")
+        return items
 
 
 class IngredientSearchResult(BaseModel):

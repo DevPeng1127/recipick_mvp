@@ -27,3 +27,15 @@ class IngredientBatchCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     items: list[IngredientCreate] = Field(min_length=1, max_length=20)
+
+
+class DistributedIngredientCreate(IngredientCreate):
+    model_config = ConfigDict(extra="forbid")
+
+    storage_box_id: int = Field(gt=0, strict=True)
+
+
+class RefrigeratorIngredientBatchCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[DistributedIngredientCreate] = Field(min_length=1, max_length=20)

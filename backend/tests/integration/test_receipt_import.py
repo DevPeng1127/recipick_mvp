@@ -89,8 +89,9 @@ async def test_invalid_upload_never_calls_ai(transactional_client, inventory_ses
     assert await snapshot(inventory_sessions) == before
 
 
+@pytest.mark.parametrize("base", [BASE, "/api/v1/refrigerators/10/ingredients"])
 async def test_receipt_voice_and_recipe_share_real_database_quota(
-    transactional_client, inventory_sessions, monkeypatch,
+    transactional_client, inventory_sessions, monkeypatch, base,
 ):
     import httpx
     from pydantic import SecretStr
@@ -114,13 +115,13 @@ async def test_receipt_voice_and_recipe_share_real_database_quota(
     monkeypatch.setattr(gemini_client.httpx, "AsyncClient", lambda **kw: client_type(transport=httpx.MockTransport(respond), **kw))
     monkeypatch.setattr(recipe_usage_limiter, "session_factory", inventory_sessions)
     await gemini_client.call_gemini("recipe", user_id=1)
-    response = await transactional_client.post(f"{BASE}/receipt-preview", content=picture(),
+    response = await transactional_client.post(f"{base}/receipt-preview", content=picture(),
                                               headers={**auth_headers(1), "Content-Type": "image/png"})
     assert response.status_code == 200, response.text
-    voice = await transactional_client.post(f"{BASE}/voice-preview", content=recording(),
+    voice = await transactional_client.post(f"{base}/voice-preview", content=recording(),
                                            headers={**auth_headers(1), "Content-Type": "audio/wav"})
     assert voice.status_code == 200
-    limited = await transactional_client.post(f"{BASE}/receipt-preview", content=picture(),
+    limited = await transactional_client.post(f"{base}/receipt-preview", content=picture(),
                                              headers={**auth_headers(1), "Content-Type": "image/png"})
     assert limited.status_code == 429
     assert limited.json()["detail"]["code"] == "user_minute_limit"

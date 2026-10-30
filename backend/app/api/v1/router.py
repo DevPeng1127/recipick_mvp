@@ -3,6 +3,7 @@ from app.api.v1.activity import router as activity_router
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.ingredients import router as ingredients_router
+from app.api.v1.ingredient_import import router as ingredient_import_router
 from app.api.v1.recipes import router as recipes_router
 from app.api.v1.receipt_import import router as receipt_import_router
 from app.api.v1.voice_import import router as voice_import_router
@@ -20,6 +21,7 @@ api_router.include_router(users_router)
 api_router.include_router(refrigerators_router)
 api_router.include_router(storage_boxes_router)
 api_router.include_router(ingredients_router)
+api_router.include_router(ingredient_import_router)
 api_router.include_router(recipes_router)
 api_router.include_router(receipt_import_router)
 api_router.include_router(voice_import_router)

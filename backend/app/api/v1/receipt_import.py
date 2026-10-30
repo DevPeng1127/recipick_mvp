@@ -23,6 +23,10 @@ async def receipt_preview(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    return await recognize_receipt(request, current_user, db)
+
+
+async def recognize_receipt(request: Request, current_user: User, db: AsyncSession):
     mime_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
     if mime_type not in IMAGE_FORMATS:
         raise HTTPException(415, "JPEG 또는 PNG 사진만 사용할 수 있습니다.")

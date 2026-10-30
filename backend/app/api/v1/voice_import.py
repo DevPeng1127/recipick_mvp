@@ -20,6 +20,10 @@ async def voice_preview(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    return await recognize_voice(request, current_user, db)
+
+
+async def recognize_voice(request: Request, current_user: User, db: AsyncSession):
     mime_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
     if mime_type != "audio/wav":
         raise HTTPException(415, "앱에서 녹음한 WAV 음성만 사용할 수 있습니다.")

@@ -9,6 +9,7 @@ from app.models.refrigerator import Refrigerator, RefrigeratorMember
 from app.models.storage import StorageBox
 from app.models.user import User
 from app.schemas.ingredient import (
+    BulkIngredientActionRequest,
     ConsumeDisposeRequest,
     IngredientCreate,
     IngredientResponse,
@@ -16,13 +17,16 @@ from app.schemas.ingredient import (
     IngredientUpdate,
 )
 from app.services.ingredient_service import (
+    bulk_action_ingredients,
     consume_or_dispose_ingredient,
     create_ingredient,
+    delete_ingredient,
     list_ingredients_by_refrigerator,
     list_ingredients_by_storage_box,
     search_ingredients,
     update_ingredient,
 )
+from app.services.sharing_service import lock_refrigerator
 
 router = APIRouter(tags=["ingredients"])
 
@@ -64,6 +68,30 @@ async def create(
     return await create_ingredient(storage_box_id, data, db)
 
 
+@router.post(
+    "/storage-boxes/{storage_box_id}/ingredients/bulk-action",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def bulk_action(
+    storage_box_id: int,
+    data: BulkIngredientActionRequest,
+    storage_box: StorageBox = Depends(require_storage_box_member),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    refrigerator = await lock_refrigerator(storage_box.refrigerator_id, db)
+    await require_refrigerator_member(storage_box.refrigerator_id, current_user, db)
+    try:
+        await bulk_action_ingredients(storage_box_id, current_user.id, refrigerator, data, db)
+    except ValueError:
+        raise HTTPException(409, detail={
+            "code": "inventory_changed",
+            "message": "선택한 식재료가 변경되었습니다. 목록을 새로고침한 뒤 다시 선택해 주세요.",
+        })
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.put(
     "/storage-boxes/{storage_box_id}/ingredients/{ingredient_id}",
     response_model=IngredientResponse,
@@ -79,6 +107,27 @@ async def update(
     if ingredient is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ingredient not found")
     return ingredient
+
+
+@router.delete(
+    "/storage-boxes/{storage_box_id}/ingredients/{ingredient_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_registration(
+    storage_box_id: int,
+    ingredient_id: int,
+    storage_box: StorageBox = Depends(require_storage_box_member),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Sharing changes use this lock; recheck access after waiting for it.
+    await lock_refrigerator(storage_box.refrigerator_id, db)
+    await require_refrigerator_member(storage_box.refrigerator_id, current_user, db)
+    await delete_ingredient(ingredient_id, storage_box_id, db)
+    # An already absent item also succeeds, so a lost response can be retried safely.
+    # Explicitly commit before reporting success. get_db rolls back any failure.
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 async def _consume_or_dispose(

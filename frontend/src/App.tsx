@@ -18,6 +18,7 @@ import StorageBoxPage from './pages/StorageBoxPage'
 import RecipePage from './pages/RecipePage'
 import PreferencePage from './pages/PreferencePage'
 import MyPage from './pages/MyPage'
+import IngredientImportPage from './pages/IngredientImportPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
@@ -43,6 +44,7 @@ function App() {
 
           <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/ingredients/import" element={<IngredientImportPage />} />
             <Route path="/refrigerators/:id/sharing" element={<SharingPage />} />
             <Route path="/refrigerators/:id" element={<RefrigeratorPage />} />
             <Route path="/storage-boxes/:id" element={<StorageBoxPage />} />

@@ -7,9 +7,10 @@ interface IngredientListProps {
   onConsume: (ingredient: Ingredient) => void
   onDispose: (ingredient: Ingredient) => void
   onEdit?: (ingredient: Ingredient) => void
+  selection?: { ids: Set<number>; disabled: boolean; limit: number; onToggle: (id: number) => void }
 }
 
-export default function IngredientList({ ingredients, onConsume, onDispose, onEdit }: IngredientListProps) {
+export default function IngredientList({ ingredients, onConsume, onDispose, onEdit, selection }: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
       <EmptyState
@@ -29,6 +30,11 @@ export default function IngredientList({ ingredients, onConsume, onDispose, onEd
           onConsume={onConsume}
           onDispose={onDispose}
           onEdit={onEdit}
+          selection={selection ? {
+            checked: selection.ids.has(ingredient.id),
+            disabled: selection.disabled || (!selection.ids.has(ingredient.id) && selection.ids.size >= selection.limit),
+            onToggle: () => selection.onToggle(ingredient.id),
+          } : undefined}
         />
       ))}
     </div>

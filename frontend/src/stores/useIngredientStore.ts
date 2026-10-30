@@ -1,13 +1,15 @@
 import { create } from 'zustand'
 import {
+  bulkIngredientAction,
   consumeIngredient,
   createIngredient,
+  deleteIngredient,
   disposeIngredient,
   listIngredientsByRefrigerator,
   listIngredientsByStorageBox,
   updateIngredient,
 } from '../api/ingredients'
-import type { ConsumeDisposeRequest, Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
+import type { BulkIngredientActionRequest, ConsumeDisposeRequest, Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
 
 interface IngredientState {
   ingredients: Ingredient[]
@@ -16,6 +18,8 @@ interface IngredientState {
   fetchByStorageBox: (storageBoxId: number) => Promise<void>
   fetchByRefrigerator: (refrigeratorId: number) => Promise<void>
   addIngredient: (storageBoxId: number, data: IngredientCreate) => Promise<void>
+  removeIngredient: (storageBoxId: number, ingredientId: number) => Promise<void>
+  bulkAction: (storageBoxId: number, data: BulkIngredientActionRequest) => Promise<void>
   editIngredient: (
     storageBoxId: number,
     ingredientId: number,
@@ -63,6 +67,17 @@ export const useIngredientStore = create<IngredientState>((set) => ({
     set((state) => ({
       ingredients: [...state.ingredients, created],
     }))
+  },
+
+  removeIngredient: async (storageBoxId: number, ingredientId: number) => {
+    await deleteIngredient(storageBoxId, ingredientId)
+    set(state => ({ ingredients: state.ingredients.filter(item => item.id !== ingredientId) }))
+  },
+
+  bulkAction: async (storageBoxId, data) => {
+    await bulkIngredientAction(storageBoxId, data)
+    const removed = new Set(data.items.map(item => item.id))
+    set(state => ({ ingredients: state.ingredients.filter(item => !removed.has(item.id)) }))
   },
 
   editIngredient: async (

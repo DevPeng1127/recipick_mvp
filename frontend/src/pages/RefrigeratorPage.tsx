@@ -10,6 +10,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
 import EmptyState from '../components/common/EmptyState'
+import ImportEntry from '../components/ingredient/ImportEntry'
 import type { StorageBox, StorageType } from '../types/storage'
 
 export default function RefrigeratorPage() {
@@ -83,6 +84,7 @@ export default function RefrigeratorPage() {
         </div>
       </div>
 
+      <ImportEntry refrigeratorId={refrigeratorId} />
       {storageBoxes.length === 0 ? (
         <EmptyState
           icon="📦"
@@ -97,6 +99,7 @@ export default function RefrigeratorPage() {
           renderItem={(box) => (
             <StorageBoxCard
               storageBox={box}
+              hasDragHandle
               onEdit={() => setEditBoxTarget(box)}
               onDelete={() => setDeleteBoxTarget(box)}
             />

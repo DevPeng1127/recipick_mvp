@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import ImportEntry from '../components/ingredient/ImportEntry'
 import { useRefrigeratorStore } from '../stores/useRefrigeratorStore'
 import { searchIngredients, type IngredientSearchResult } from '../api/ingredients'
 import RefrigeratorCard from '../components/refrigerator/RefrigeratorCard'
@@ -117,6 +118,7 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      <ImportEntry />
       {refrigerators.length === 0 ? (
         <EmptyState
           icon="🧊"

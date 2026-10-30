@@ -2,20 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { previewReceipt, type ReceiptItem } from '../../api/receiptImport'
 import { previewVoice } from '../../api/voiceImport'
+import { previewRefrigeratorImport } from '../../api/ingredientImport'
+import type { StorageBox } from '../../types/storage'
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder'
 import type { IngredientCreate } from '../../types/ingredient'
 
-export interface ImportPanelProps {
-  storageBoxId: number
-  onSave: (items: IngredientCreate[]) => Promise<void>
+export type ImportPanelProps = {
+  disabled?: boolean
+  onSave: (items: (IngredientCreate & { storage_box_id?: number })[]) => Promise<void>
   onClose: () => void
-}
+} & ({ refrigeratorId: number; storageBoxes: StorageBox[]; storageBoxId?: number }
+  | { storageBoxId: number; refrigeratorId?: never; storageBoxes?: never })
 
 interface Candidate extends Omit<ReceiptItem, 'quantity' | 'unit'> {
   quantity: string
   unit: string
   expiry_date: string
   selected: boolean
+  storage_box_id: string
 }
 
 function recognitionError(error: unknown, isVoice: boolean): string {
@@ -26,13 +30,13 @@ function recognitionError(error: unknown, isVoice: boolean): string {
       return typeof retry === 'number' ? `${detail.message} 약 ${retry}초 후 다시 시도해 주세요.` : detail.message
     }
     if (typeof detail === 'string' && [400, 413, 415, 502].includes(error.response?.status ?? 0)) return detail
-    if (error.response?.status === 403) return '이 보관함에 접근할 권한이 없습니다.'
+    if (error.response?.status === 403) return '이 냉장고에 접근할 권한이 없습니다.'
   }
   return isVoice ? '음성 인식에 실패했습니다. 녹음을 확인한 뒤 다시 시도해 주세요.'
     : '영수증 인식에 실패했습니다. 사진을 확인한 뒤 다시 시도해 주세요.'
 }
 
-export default function IngredientImportPanel({ storageBoxId, onSave, onClose, mode }: ImportPanelProps & { mode: 'receipt' | 'voice' }) {
+export default function IngredientImportPanel({ storageBoxId, refrigeratorId, storageBoxes, onSave, onClose, mode, disabled = false }: ImportPanelProps & { mode: 'receipt' | 'voice' }) {
   const isVoice = mode === 'voice'
   const label = isVoice ? '음성' : '영수증'
   const recording = useVoiceRecorder()
@@ -45,6 +49,7 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
   const [busy, setBusy] = useState<'analyzing' | 'saving' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [uncertainSave, setUncertainSave] = useState(false)
+  const [bulkBox, setBulkBox] = useState('')
   const busyRef = useRef(false)
   const controller = useRef<AbortController | null>(null)
   const mounted = useRef(true)
@@ -79,16 +84,19 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
   }
 
   async function analyze() {
-    if (!file || busyRef.current || uncertainSave) return
+    if (!file || disabled || busyRef.current || uncertainSave) return
     busyRef.current = true
     setBusy('analyzing'); setError(null)
     controller.current = new AbortController()
     try {
-      const result = await (isVoice ? previewVoice : previewReceipt)(storageBoxId, file, controller.current.signal)
+      const result = refrigeratorId !== undefined
+        ? await previewRefrigeratorImport(refrigeratorId, mode, file, controller.current.signal)
+        : await (isVoice ? previewVoice : previewReceipt)(storageBoxId!, file, controller.current.signal)
       if (!mounted.current) return
       setCandidates(result.items.map(item => ({
         ...item, quantity: item.quantity === null ? '' : String(item.quantity),
         unit: item.unit ?? '', expiry_date: '', selected: true,
+        storage_box_id: storageBoxId === undefined ? '' : String(storageBoxId),
       })))
       setHasMore(result.has_more)
     } catch (reason) {
@@ -110,6 +118,9 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
     const selected = candidates?.filter(item => item.selected) ?? []
     if (!selected.length) { setError('등록할 식재료를 선택해 주세요.'); return }
     for (const item of selected) {
+      if (refrigeratorId !== undefined && !storageBoxes?.some(box => box.id === Number(item.storage_box_id))) {
+        setError('선택한 모든 식재료의 보관함을 지정해 주세요.'); return
+      }
       const quantity = Number(item.quantity)
       if (!item.name.trim() || item.name.trim().length > 100 || !item.quantity.trim()
         || !Number.isFinite(quantity) || quantity <= 0 || !item.unit.trim() || item.unit.trim().length > 20) {
@@ -125,6 +136,7 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
       await onSave(selected.map(item => ({
         name: item.name.trim(), quantity: Number(item.quantity), unit: item.unit.trim(),
         expiry_date: item.expiry_date || null,
+        ...(refrigeratorId !== undefined ? { storage_box_id: Number(item.storage_box_id) } : {}),
       })))
       if (mounted.current) onClose()
     } catch (reason) {
@@ -134,7 +146,9 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
         setUncertainSave(true)
         setError('저장 결과를 확인할 수 없습니다. 중복 등록을 막기 위해 입력을 닫고 재고 목록을 확인한 뒤 다시 등록해 주세요.')
       } else if (status === 403) {
-        setError('이 보관함에 등록할 권한이 없습니다. 입력 내용은 유지됩니다.')
+        setError('이 냉장고에 등록할 권한이 없습니다. 입력 내용은 유지됩니다.')
+      } else if (status === 409) {
+        setError('보관함이 변경되어 아무것도 저장하지 않았습니다. 보관함을 다시 선택해 주세요. 입력 내용은 유지됩니다.')
       } else {
         setError('저장되지 않았습니다. 입력값을 확인하고 다시 등록해 주세요.')
       }
@@ -149,7 +163,7 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <h2 className="text-lg font-semibold text-gray-800">{label}으로 등록</h2>
-          <p className="text-sm text-gray-600 mt-1">인식 결과를 확인하고 수정한 뒤 현재 보관함에 등록하세요.</p>
+          <p className="text-sm text-gray-600 mt-1">{refrigeratorId !== undefined ? '인식 결과를 확인하고 재료별 보관함을 지정해 한 번에 등록하세요.' : '인식 결과를 확인하고 수정한 뒤 현재 보관함에 등록하세요.'}</p>
         </div>
         <button type="button" onClick={onClose} disabled={!!busy} aria-label={`${label} 입력 닫기`}
           className="shrink-0 text-sm text-gray-500 px-2 py-1 disabled:opacity-40">닫기</button>
@@ -165,7 +179,7 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
         <div className="flex flex-wrap items-center gap-3 mt-4">
           {recording.status === 'recording' ? <button type="button" onClick={recording.stop}
             className="rounded-lg bg-red-600 px-4 py-2 text-white">녹음 끝내기</button>
-            : <button type="button" disabled={!!busy || uncertainSave || recordingActive} onClick={() => {
+            : <button type="button" disabled={disabled || !!busy || uncertainSave || recordingActive} onClick={() => {
               setCandidates(null); setHasMore(false); setError(null); void recording.start()
             }} className="rounded-lg border border-purple-300 bg-white px-4 py-2 text-purple-700 disabled:opacity-50">
               {file ? '다시 녹음' : '녹음 시작'}
@@ -182,13 +196,13 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
         {imageUrl && <audio controls src={imageUrl} aria-label="녹음 미리듣기" className="mt-4 w-full max-w-md" />}
       </div> : <>
       <label className="block text-sm font-medium text-gray-700" htmlFor="receipt-photo">영수증 사진</label>
-      <input id="receipt-photo" type="file" accept="image/jpeg,image/png" disabled={!!busy || uncertainSave}
+      <input id="receipt-photo" type="file" accept="image/jpeg,image/png" disabled={disabled || !!busy || uncertainSave}
         onChange={event => chooseFile(event.target.files?.[0])}
         className="block w-full min-w-0 text-sm text-gray-600 mt-2 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-3 file:py-2 file:text-purple-700" />
       <p className="text-xs text-gray-500 mt-2">JPEG·PNG 한 장 · 최대 5MB / 2천만 화소 · 최대 20개 식재료</p>
       {imageUrl && <img src={imageUrl} alt="선택한 영수증" className="mt-4 max-h-48 max-w-full rounded-lg border bg-white object-contain" />}
       </>}
-      <button type="button" disabled={!file || !!busy || uncertainSave} onClick={analyze}
+      <button type="button" disabled={disabled || !file || !!busy || uncertainSave} onClick={analyze}
         className="mt-4 rounded-lg bg-purple-600 px-4 py-2 text-white disabled:opacity-50">
         {busy === 'analyzing' ? (isVoice ? '음성을 읽고 있어요...' : '사진을 읽고 있어요...') : (isVoice ? '음성 인식하기' : '사진 인식하기')}
       </button>
@@ -200,6 +214,18 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
         <div className="mt-6">
           <h3 className="font-medium text-gray-800">인식 결과 확인 · {candidates.length}개</h3>
           <p className="text-sm text-gray-500 mt-1 mb-3">{isVoice ? '말한 이름·수량·단위가 맞는지 확인하세요.' : '가격·용량과 구매 수량이 혼동되지 않았는지 확인하세요.'} 유통기한은 직접 입력할 수 있습니다.</p>
+          {storageBoxes && <fieldset disabled={!!busy || uncertainSave} className="mb-4 rounded-lg border border-purple-200 p-3">
+            <label className="block text-sm text-gray-700">포함된 항목의 보관함 일괄 지정
+              <select value={bulkBox} onChange={event => setBulkBox(event.target.value)} className="mt-2 w-full min-w-0 rounded border bg-white px-2 py-2 text-sm">
+                <option value="">보관함 선택</option>
+                {storageBoxes.map(box => <option key={box.id} value={box.id}>{box.name} · {box.type === 'FRIDGE' ? '냉장' : box.type === 'FREEZER' ? '냉동' : '실온'}</option>)}
+              </select>
+            </label>
+            <button type="button" disabled={!selectedCount || !storageBoxes.some(box => box.id === Number(bulkBox))}
+              onClick={() => { setCandidates(current => current?.map(item => item.selected ? { ...item, storage_box_id: bulkBox } : item) ?? null); setError(null) }}
+              className="mt-2 rounded-lg border border-purple-300 bg-white px-3 py-2 text-sm text-purple-700 disabled:opacity-40">포함된 {selectedCount}개에 적용</button>
+            <p className="mt-2 text-xs text-gray-500">아래 체크한 항목에 적용합니다. 각 항목에서 보관함을 따로 바꿀 수도 있습니다.</p>
+          </fieldset>}
           <div className="space-y-3">
             {candidates.map((item, index) => (
               <fieldset key={index} disabled={!!busy || uncertainSave} className={`rounded-lg border bg-white p-3 ${item.selected ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
@@ -231,6 +257,15 @@ export default function IngredientImportPanel({ storageBoxId, onSave, onClose, m
                       className="mt-1 w-full min-w-0 rounded border px-2 py-2 text-sm text-gray-800" />
                   </label>
                 </div>
+                {storageBoxes && <label className="mt-3 block text-xs text-gray-600">보관함 (필수)
+                  <select aria-label={`보관함 ${index + 1}`} value={item.storage_box_id}
+                    onChange={event => edit(index, { storage_box_id: event.target.value })}
+                    className="mt-1 w-full min-w-0 rounded border bg-white px-2 py-2 text-sm text-gray-800">
+                    <option value="">보관함 선택</option>
+                    {item.storage_box_id && !storageBoxes.some(box => box.id === Number(item.storage_box_id)) && <option value={item.storage_box_id}>사용할 수 없는 보관함 · 다시 선택해 주세요</option>}
+                    {storageBoxes.map(box => <option key={box.id} value={box.id}>{box.name} · {box.type === 'FRIDGE' ? '냉장' : box.type === 'FREEZER' ? '냉동' : '실온'}</option>)}
+                  </select>
+                </label>}
               </fieldset>
             ))}
           </div>

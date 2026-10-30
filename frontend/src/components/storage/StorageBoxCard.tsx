@@ -10,11 +10,12 @@ const typeConfig = {
 
 interface StorageBoxCardProps {
   storageBox: StorageBox
+  hasDragHandle?: boolean
   onEdit?: () => void
   onDelete?: () => void
 }
 
-export default function StorageBoxCard({ storageBox, onEdit, onDelete }: StorageBoxCardProps) {
+export default function StorageBoxCard({ storageBox, hasDragHandle = false, onEdit, onDelete }: StorageBoxCardProps) {
   const config = typeConfig[storageBox.type]
 
   const menuItems = []
@@ -24,16 +25,16 @@ export default function StorageBoxCard({ storageBox, onEdit, onDelete }: Storage
   return (
     <Link
       to={`/storage-boxes/${storageBox.id}`}
-      className="block bg-white rounded-lg border p-4 hover:shadow-sm transition"
+      className={`block min-w-0 bg-white rounded-lg border py-4 pr-4 hover:shadow-sm transition ${hasDragHandle ? 'pl-12' : 'pl-4'}`}
     >
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <h4 className="font-medium text-gray-800">{storageBox.name}</h4>
-          <span className={`text-xs px-2 py-1 rounded-full ${config.color}`}>
+      <div className="flex justify-between items-center gap-3">
+        <div className="flex flex-1 min-w-0 flex-wrap items-center gap-2">
+          <h4 className="max-w-full break-words font-medium text-gray-800">{storageBox.name}</h4>
+          <span className={`shrink-0 text-xs px-2 py-1 rounded-full ${config.color}`}>
             {config.label}
           </span>
         </div>
-        {menuItems.length > 0 && <KebabMenu items={menuItems} />}
+        {menuItems.length > 0 && <div className="shrink-0"><KebabMenu items={menuItems} /></div>}
       </div>
     </Link>
   )

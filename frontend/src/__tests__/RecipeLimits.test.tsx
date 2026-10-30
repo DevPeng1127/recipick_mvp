@@ -15,6 +15,7 @@ beforeEach(() => {
   vi.resetAllMocks()
   useRecipeStore.setState(useRecipeStore.getInitialState(), true)
   useRefrigeratorStore.setState(useRefrigeratorStore.getInitialState(), true)
+  vi.mocked(recipeApi.getMenuInventory).mockResolvedValue({ as_of: '2026-10-30', ingredients: [{ ingredient_id: 100, name: '당근', quantity: 1, unit: '개', expiry_date: null, expiry_source: 'unknown', refrigerator_id: 10, refrigerator_name: '테스트 냉장고', storage_box_name: '채소칸' }] })
   vi.mocked(fridgeApi.listRefrigerators).mockResolvedValue([{
     id: 10, name: '테스트 냉장고', created_at: '', role: 'OWNER', is_favorite: false,
     top_ingredients: [], total_ingredient_count: 2,
@@ -36,7 +37,7 @@ describe('Recipe rate limits through page and store', () => {
       requirements: [], stock: [], suggestions: [], applied_at: null, result: null,
     })
     render(<MemoryRouter initialEntries={['/recipes']}><RecipePage /></MemoryRouter>)
-    expect(await screen.findByRole('button', { name: '요리 완료 · 사용 재료 확인' })).toBeVisible()
+    expect(await screen.findByRole('button', { name: '먹은 항목 확인 · 스마트 차감' })).toBeVisible()
     expect(screen.getByRole('heading', { name: '저장된 요리' })).toBeVisible()
     expect(recipeApi.getCookingPreview).toHaveBeenCalledWith('saved-plan')
     expect(recipeApi.recommendRecipe).not.toHaveBeenCalled()
@@ -48,11 +49,11 @@ describe('Recipe rate limits through page and store', () => {
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /테스트 냉장고/ }))
     expect(screen.getByLabelText('인분')).toHaveValue('1')
-    await user.click(screen.getByRole('button', { name: /AI 레시피 추천받기/ }))
-    await waitFor(() => expect(recipeApi.recommendRecipe).toHaveBeenCalledWith([10], 1))
+    await user.click(screen.getByRole('button', { name: /AI 메뉴 추천받기/ }))
+    await waitFor(() => expect(recipeApi.recommendRecipe).toHaveBeenCalledWith([10], 1, []))
     await user.selectOptions(screen.getByLabelText('인분'), '8')
-    await user.click(screen.getByRole('button', { name: /AI 레시피 추천받기/ }))
-    await waitFor(() => expect(recipeApi.recommendRecipe).toHaveBeenLastCalledWith([10], 8))
+    await user.click(screen.getByRole('button', { name: /AI 메뉴 추천받기/ }))
+    await waitFor(() => expect(recipeApi.recommendRecipe).toHaveBeenLastCalledWith([10], 8, []))
   })
 
   it('shows the reason and Korean retry time, then allows a manual retry', async () => {
@@ -62,7 +63,7 @@ describe('Recipe rate limits through page and store', () => {
     render(<MemoryRouter><RecipePage /></MemoryRouter>)
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: /테스트 냉장고/ }))
-    await user.click(screen.getByRole('button', { name: /AI 레시피 추천받기/ }))
+    await user.click(screen.getByRole('button', { name: /AI 메뉴 추천받기/ }))
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('오늘의 레시피 추천 횟수를 모두 사용했습니다.')
@@ -70,9 +71,9 @@ describe('Recipe rate limits through page and store', () => {
     expect(alert).toHaveTextContent('00:00:00')
     expect(alert).toHaveTextContent('한국 시간')
     expect(recipeApi.recommendRecipe).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('button', { name: /AI 레시피 추천받기/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /AI 메뉴 추천받기/ })).toBeEnabled()
 
-    await user.click(screen.getByRole('button', { name: /AI 레시피 추천받기/ }))
+    await user.click(screen.getByRole('button', { name: /AI 메뉴 추천받기/ }))
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
     expect(screen.getByText(/맛있는 레시피입니다/)).toBeVisible()
     expect(recipeApi.recommendRecipe).toHaveBeenCalledTimes(2)
@@ -116,7 +117,7 @@ describe('Recipe rate limits through page and store', () => {
     await useRecipeStore.getState().fetchRecipe([10])
     expect(useRecipeStore.getState().error).toContain('사용 한도에 도달했습니다.')
     await useRecipeStore.getState().fetchRecipe([10])
-    expect(useRecipeStore.getState().error).toBe('레시피 추천에 실패했습니다.')
+    expect(useRecipeStore.getState().error).toBe('메뉴 추천에 실패했습니다.')
     expect(useRecipeStore.getState().isLoading).toBe(false)
   })
 })

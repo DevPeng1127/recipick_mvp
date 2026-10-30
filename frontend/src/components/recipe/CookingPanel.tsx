@@ -93,25 +93,25 @@ export default function CookingPanel({ initial, onRepeat }: { initial: CookingPr
     <h2 className="text-lg font-bold">차감 완료</h2>
     <p role="status">{result.title}의 재고 차감과 소비 이력을 저장했습니다.</p>
     <ul>{result.items.map(item => <li key={item.ingredient_id}>{item.name} {item.quantity}{item.unit} 사용 · 남은 재고 {item.remaining_quantity}{item.unit}</li>)}</ul>
-    <p className="text-sm text-gray-600">이 화면을 새로고침해도 다시 차감되지 않습니다. 다른 날 같은 요리를 만들 때만 아래 버튼을 사용하세요.</p>
+    <p className="text-sm text-gray-600">이 화면을 새로고침해도 다시 차감되지 않습니다. 다른 날 같은 메뉴를 먹을 때만 아래 버튼을 사용하세요.</p>
     <button disabled={busy} className="text-purple-700 underline" onClick={async () => {
       if (flight.current) return
       flight.current = true; setBusy(true); setError('')
       try { const next = await repeatRecipe(preview.plan_id); if (next.plan_id) onRepeat(next.plan_id) }
-      catch { setError('새 요리를 준비하지 못했습니다. 다시 시도해 주세요.') }
+      catch { setError('새 메뉴 기록을 준비하지 못했습니다. 다시 시도해 주세요.') }
       finally { flight.current = false; setBusy(false) }
-    }}>이 레시피로 다시 요리하기</button>
+    }}>이 메뉴로 다시 먹기</button>
     {error && <p role="alert" className="text-red-600">{error}</p>}
   </section>
 
   return <section className="mt-5 p-5 bg-white border border-purple-200 rounded-xl space-y-4">
-    <h2 className="text-lg font-bold">요리 후 스마트 차감 · {preview.servings}인분</h2>
-    <p className="text-sm text-gray-600">실제로 사용한 재료와 양을 확인해 주세요. 차감 확정 전까지 재고는 그대로입니다.</p>
+    <h2 className="text-lg font-bold">식사 후 스마트 차감 · {preview.servings}인분</h2>
+    <p className="text-sm text-gray-600">음료·완제품을 포함해 실제 먹거나 조리에 사용한 항목과 양을 확인해 주세요. 차감 확정 전까지 재고는 그대로입니다.</p>
     {error && <p role="alert" className="text-red-600">{error}</p>}
     {phase === 'closed' ? <button disabled={busy} className="bg-purple-600 text-white rounded-lg px-4 py-2 disabled:opacity-50" onClick={refresh}>
-      {busy ? '재고 확인 중…' : '요리 완료 · 사용 재료 확인'}
+      {busy ? '재고 확인 중…' : '먹은 항목 확인 · 스마트 차감'}
     </button> : <>
-      <p className="text-sm text-gray-500">유통기한이 가까운 재고부터 제안합니다. 연결할 재고를 바꾸면 수량을 다시 입력해 주세요. 직접 산 재료 등 차감하지 않을 행은 체크를 해제하세요.</p>
+      <p className="text-sm text-gray-500">같은 이름이면 기한이 가까운 재고부터 연결하며, 날짜가 지난 재고는 자동 연결하지 않습니다. 연결할 재고를 바꾸면 수량을 다시 입력해 주세요. 먹지 않은 음료나 직접 산 재료 등 차감하지 않을 행은 체크를 해제하세요.</p>
       <fieldset disabled={locked} className="space-y-3 disabled:opacity-60">
         {rows.map((row, index) => {
           const need = preview.requirements[row.requirementIndex]

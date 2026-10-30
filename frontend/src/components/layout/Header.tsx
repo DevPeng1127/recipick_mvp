@@ -21,7 +21,7 @@ export default function Header() {
             냉장고
           </Link>
           <Link to="/recipes" className="text-gray-600 hover:text-purple-600">
-            레시피
+            메뉴 추천
           </Link>
           <Link to="/preferences" className="text-gray-600 hover:text-purple-600">
             설정

@@ -2,7 +2,21 @@ import type { ExpirySource } from './ingredient'
 export interface RecipeRecommendRequest {
   refrigerator_ids: number[]
   servings?: number
+  priority_ingredient_ids?: number[]
 }
+
+export interface MenuIngredient {
+  ingredient_id: number
+  name: string
+  quantity: number
+  unit: string
+  expiry_date: string | null
+  expiry_source: ExpirySource
+  refrigerator_id: number
+  refrigerator_name: string
+  storage_box_name: string
+}
+export interface MenuInventory { as_of: string; ingredients: MenuIngredient[] }
 
 export interface RecipeResponse {
   recipe: string

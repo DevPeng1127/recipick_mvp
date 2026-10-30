@@ -26,7 +26,7 @@ async function open(data = preview()) {
   vi.mocked(api.getCookingPreview).mockResolvedValue(data)
   const user = userEvent.setup()
   render(<CookingPanel initial={data} onRepeat={vi.fn()} />)
-  await user.click(screen.getByRole('button', { name: '요리 완료 · 사용 재료 확인' }))
+  await user.click(screen.getByRole('button', { name: '먹은 항목 확인 · 스마트 차감' }))
   await screen.findByRole('button', { name: '확인한 재료 일괄 차감' })
   return user
 }
@@ -144,7 +144,7 @@ describe('cooking confirmation', () => {
     expect(screen.getByText('차감 완료')).toBeVisible()
     expect(api.consumeRecipe).not.toHaveBeenCalled()
     expect(api.repeatRecipe).not.toHaveBeenCalled()
-    await userEvent.click(screen.getByRole('button', { name: '이 레시피로 다시 요리하기' }))
+    await userEvent.click(screen.getByRole('button', { name: '이 메뉴로 다시 먹기' }))
     await waitFor(() => expect(onRepeat).toHaveBeenCalledWith('plan-2'))
     expect(api.consumeRecipe).not.toHaveBeenCalled()
   })

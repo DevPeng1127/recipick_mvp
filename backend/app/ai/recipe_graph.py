@@ -12,6 +12,7 @@ from app.schemas.recipe import GeneratedRecipe
 class RecipeState(TypedDict):
     user_id: int
     servings: int
+    priority_ingredient_ids: list[int]
     ingredients: list[Ingredient]
     preference: UserPreference | None
     prompt: str
@@ -27,7 +28,7 @@ def gather_context(state: RecipeState) -> dict:
 
 
 def build_prompt(state: RecipeState) -> dict:
-    prompt = build_recipe_prompt(state["ingredients"], state["preference"], state["servings"])
+    prompt = build_recipe_prompt(state["ingredients"], state["preference"], state["servings"], state.get("priority_ingredient_ids", []))
     return {"prompt": prompt}
 
 
@@ -59,7 +60,8 @@ def build_recipe_graph() -> StateGraph:
 
 
 async def run_recipe_graph(
-    ingredients: list[Ingredient], preference: UserPreference | None, *, user_id: int, servings: int = 1
+    ingredients: list[Ingredient], preference: UserPreference | None, *, user_id: int, servings: int = 1,
+    priority_ingredient_ids: list[int] | None = None,
 ) -> GeneratedRecipe:
     graph = build_recipe_graph()
     app = graph.compile()
@@ -67,6 +69,7 @@ async def run_recipe_graph(
     initial_state: RecipeState = {
         "user_id": user_id,
         "servings": servings,
+        "priority_ingredient_ids": priority_ingredient_ids or [],
         "ingredients": ingredients,
         "preference": preference,
         "prompt": "",

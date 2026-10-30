@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.ai.prompts import today_kst
 
 from app.models.cooking_plan import CookingPlan
 from app.models.ingredient import Ingredient
@@ -83,7 +84,8 @@ def suggestions(requirements: list[dict], stock: list[CookingStock]):
     results = []
     available = {item.ingredient_id: Decimal(str(item.quantity)) for item in stock}
     for index, need in enumerate(requirements):
-        matches = [s for s in stock if s.name.strip().casefold() == need["ingredient_name"].strip().casefold()]
+        matches = [s for s in stock if s.name.strip().casefold() == need["ingredient_name"].strip().casefold()
+                   and (s.expiry_date is None or s.expiry_date >= today_kst())]
         compatible = [s for s in matches if conversion(need["unit"], s.unit) is not None]
         if need["quantity"] is None or not compatible:
             results.append(CookingSuggestion(requirement_index=index,

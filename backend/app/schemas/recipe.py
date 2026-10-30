@@ -14,6 +14,31 @@ Quantity = Annotated[float, Field(gt=0, le=1_000_000, allow_inf_nan=False, stric
 class RecipeRecommendRequest(BaseModel):
     refrigerator_ids: list[int]
     servings: int = Field(default=1, ge=1, le=8, strict=True)
+    priority_ingredient_ids: list[Annotated[int, Field(gt=0, strict=True)]] = Field(default_factory=list, max_length=30)
+
+    @field_validator("priority_ingredient_ids")
+    @classmethod
+    def unique_priorities(cls, items):
+        if len(items) != len(set(items)):
+            raise ValueError("우선 활용 재료가 중복되었습니다.")
+        return items
+
+
+class MenuIngredient(BaseModel):
+    ingredient_id: int
+    name: str
+    quantity: float
+    unit: str
+    expiry_date: date | None
+    expiry_source: ExpirySource
+    refrigerator_id: int
+    refrigerator_name: str
+    storage_box_name: str
+
+
+class MenuInventory(BaseModel):
+    as_of: date
+    ingredients: list[MenuIngredient]
 
 
 class RecipeResponse(BaseModel):
@@ -30,7 +55,7 @@ class RecipeNeed(BaseModel):
 class GeneratedRecipe(BaseModel):
     title: ResourceName
     recipe: str = Field(min_length=1, max_length=12000)
-    requirements: list[RecipeNeed] = Field(min_length=1, max_length=30)
+    requirements: list[RecipeNeed] = Field(max_length=30)
 
 
 class CookingStock(BaseModel):

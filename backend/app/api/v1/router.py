@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from app.api.v1.activity import router as activity_router
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.ingredients import router as ingredients_router
@@ -12,6 +13,7 @@ from app.api.v1.users import router as users_router
 from app.api.v1.sharing import router as sharing_router
 
 api_router = APIRouter()
+api_router.include_router(activity_router)
 
 api_router.include_router(auth_router)
 api_router.include_router(users_router)

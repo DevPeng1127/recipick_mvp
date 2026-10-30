@@ -12,11 +12,11 @@ export default function Header() {
 
   return (
     <header className="bg-white shadow-sm border-b">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-3 justify-between items-center">
         <Link to="/dashboard" className="text-xl font-bold text-purple-600">
           Recipick
         </Link>
-        <nav className="flex items-center gap-4">
+        <nav className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Link to="/dashboard" className="text-gray-600 hover:text-purple-600">
             냉장고
           </Link>
@@ -26,8 +26,11 @@ export default function Header() {
           <Link to="/preferences" className="text-gray-600 hover:text-purple-600">
             설정
           </Link>
+          <Link to="/my" className="text-gray-600 hover:text-purple-600">
+            마이페이지
+          </Link>
           {user && (
-            <span className="text-sm text-gray-500">{user.nickname}</span>
+            <span className="text-sm text-gray-500 max-w-32 truncate">{user.nickname}</span>
           )}
           <button
             onClick={handleLogout}

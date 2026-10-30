@@ -17,6 +17,7 @@ import RefrigeratorPage from './pages/RefrigeratorPage'
 import StorageBoxPage from './pages/StorageBoxPage'
 import RecipePage from './pages/RecipePage'
 import PreferencePage from './pages/PreferencePage'
+import MyPage from './pages/MyPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
             <Route path="/storage-boxes/:id" element={<StorageBoxPage />} />
             <Route path="/recipes" element={<RecipePage />} />
             <Route path="/preferences" element={<PreferencePage />} />
+            <Route path="/my" element={<MyPage />} />
           </Route>
 
           {/* Redirects and fallback */}

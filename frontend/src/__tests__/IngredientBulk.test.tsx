@@ -10,6 +10,7 @@ import { useToastStore } from '../stores/useToastStore'
 import * as api from '../api/ingredients'
 import type { BulkIngredientAction } from '../types/ingredient'
 
+vi.mock('../api/ingredientImport', () => ({ getImportStorageBox: async () => ({ id: 10, type: 'FRIDGE' }) }))
 vi.mock('../api/ingredients')
 const stock = [
   { id: 20, storage_box_id: 10, name: '우유', quantity: 2, unit: '팩', expiry_date: null },

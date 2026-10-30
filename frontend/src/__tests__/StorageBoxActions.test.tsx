@@ -7,6 +7,7 @@ import StorageBoxPage from '../pages/StorageBoxPage'
 import { useIngredientStore } from '../stores/useIngredientStore'
 import type { Ingredient } from '../types/ingredient'
 
+vi.mock('../api/ingredientImport', () => ({ getImportStorageBox: async () => ({ id: 10, type: 'FRIDGE' }) }))
 vi.mock('../api/ingredients')
 
 const ingredient: Ingredient = {

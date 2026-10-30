@@ -29,6 +29,7 @@ class IngredientLog(Base):
     quantity: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String(20), nullable=False)
     expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    expiry_source: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown", server_default="unknown")
     memo: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

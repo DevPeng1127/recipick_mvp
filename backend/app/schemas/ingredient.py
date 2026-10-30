@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints, field_validator
+from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
 from app.schemas.common import ResourceName
@@ -11,6 +11,14 @@ IngredientUnit = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)
 ]
 PositiveQuantity = Annotated[float, Field(gt=0, allow_inf_nan=False, strict=True)]
+ExpirySource = Literal["unknown", "label", "estimated", "untracked"]
+
+
+def validate_expiry(expiry_date, expiry_source):
+    if expiry_source in ("label", "estimated") and expiry_date is None:
+        raise ValueError("A label or estimated date is required")
+    if expiry_source == "untracked" and expiry_date is not None:
+        raise ValueError("Untracked ingredients cannot have an expiry date")
 
 
 class IngredientCreate(BaseModel):
@@ -18,6 +26,12 @@ class IngredientCreate(BaseModel):
     quantity: PositiveQuantity = 1
     unit: IngredientUnit = "개"
     expiry_date: date | None = None
+    expiry_source: ExpirySource = "unknown"
+
+    @model_validator(mode="after")
+    def valid_expiry(self):
+        validate_expiry(self.expiry_date, self.expiry_source)
+        return self
 
 
 class IngredientUpdate(BaseModel):
@@ -25,8 +39,9 @@ class IngredientUpdate(BaseModel):
     quantity: PositiveQuantity | SkipJsonSchema[None] = None
     unit: IngredientUnit | SkipJsonSchema[None] = None
     expiry_date: date | None = None
+    expiry_source: ExpirySource | SkipJsonSchema[None] = None
 
-    @field_validator("name", "quantity", "unit")
+    @field_validator("name", "quantity", "unit", "expiry_source")
     @classmethod
     def reject_explicit_null(cls, value):
         # Omitted fields keep their default and are excluded by exclude_unset.
@@ -39,6 +54,7 @@ class IngredientUpdate(BaseModel):
 class IngredientBriefResponse(BaseModel):
     name: str
     expiry_date: date | None = None
+    expiry_source: ExpirySource = "unknown"
 
     model_config = {"from_attributes": True}
 
@@ -50,6 +66,7 @@ class IngredientResponse(BaseModel):
     quantity: float
     unit: str
     expiry_date: date | None = None
+    expiry_source: ExpirySource = "unknown"
 
     model_config = {"from_attributes": True}
 
@@ -66,6 +83,7 @@ class BulkIngredientTarget(BaseModel):
     quantity: PositiveQuantity
     unit: IngredientUnit
     expiry_date: date | None
+    expiry_source: ExpirySource | None = None  # Older clients have no provenance snapshot.
 
 
 class BulkIngredientActionRequest(BaseModel):
@@ -87,6 +105,7 @@ class IngredientSearchResult(BaseModel):
     quantity: float
     unit: str
     expiry_date: date | None = None
+    expiry_source: ExpirySource = "unknown"
     storage_box_name: str
     storage_box_type: str
     refrigerator_name: str

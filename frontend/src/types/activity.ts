@@ -1,3 +1,4 @@
+import type { ExpirySource } from './ingredient'
 export type ActivityAction = 'CONSUMED' | 'DISPOSED'
 export interface ActivityFilters {
   days: 7 | 30 | 90
@@ -16,6 +17,7 @@ export interface ActivityItem {
   actor_name: string
   is_mine: boolean
   expiry_date: string | null
+  expiry_source?: ExpirySource
   memo: string | null
   created_at: string
 }

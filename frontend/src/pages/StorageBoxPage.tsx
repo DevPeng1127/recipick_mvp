@@ -1,3 +1,5 @@
+import { getImportStorageBox } from '../api/ingredientImport'
+import type { StorageType } from '../types/storage'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useIngredientStore } from '../stores/useIngredientStore'
@@ -35,6 +37,13 @@ function StorageBoxContent({ storageBoxId }: { storageBoxId: number }) {
     bulkAction,
   } = useIngredientStore()
   const ingredients = storedIngredients.filter(item => item.storage_box_id === storageBoxId)
+
+  const [storageType, setStorageType] = useState<StorageType>()
+  useEffect(() => {
+    let active = true
+    void getImportStorageBox(storageBoxId).then(box => { if (active) setStorageType(box.type) }).catch(() => { /* Without context, leave dates unset. */ })
+    return () => { active = false }
+  }, [storageBoxId])
 
   const [editTarget, setEditTarget] = useState<Ingredient | null>(null)
   const [consumeDisposeTarget, setConsumeDisposeTarget] = useState<Ingredient | null>(null)
@@ -100,7 +109,7 @@ function StorageBoxContent({ storageBoxId }: { storageBoxId: number }) {
         <>
           {!selecting && <><ImportEntry storageBoxId={storageBoxId} />
           <div className="mb-4">
-            <IngredientForm
+            <IngredientForm storageType={storageType}
               onSubmit={async (data) => {
                 await addIngredient(storageBoxId, data)
               }}

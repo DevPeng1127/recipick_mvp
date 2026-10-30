@@ -5,7 +5,7 @@ from app.models.ingredient import Ingredient
 from app.models.ingredient_log import ActionType, IngredientLog
 from app.models.refrigerator import Refrigerator, RefrigeratorMember
 from app.models.storage import StorageBox
-from app.schemas.ingredient import BulkIngredientActionRequest, ConsumeDisposeRequest, IngredientCreate, IngredientSearchResult, IngredientUpdate
+from app.schemas.ingredient import BulkIngredientActionRequest, ConsumeDisposeRequest, IngredientCreate, IngredientSearchResult, IngredientUpdate, validate_expiry
 
 
 async def list_ingredients_by_storage_box(
@@ -38,6 +38,7 @@ async def create_ingredient(
         quantity=data.quantity,
         unit=data.unit,
         expiry_date=data.expiry_date,
+        expiry_source=data.expiry_source,
     )
     db.add(ingredient)
     await db.flush()
@@ -58,6 +59,10 @@ async def update_ingredient(
         return None
 
     update_data = data.model_dump(exclude_unset=True)
+    if "expiry_date" in update_data and "expiry_source" not in update_data:
+        update_data["expiry_source"] = "label" if data.expiry_date else "unknown"
+    validate_expiry(update_data.get("expiry_date", ingredient.expiry_date),
+                    update_data.get("expiry_source", ingredient.expiry_source))
     for key, value in update_data.items():
         setattr(ingredient, key, value)
 
@@ -92,6 +97,7 @@ async def bulk_action_ingredients(
     fields = ("name", "quantity", "unit", "expiry_date")
     if len(ingredients) != len(expected) or any(
         any(getattr(item, field) != getattr(expected[item.id], field) for field in fields)
+        or (expected[item.id].expiry_source is not None and item.expiry_source != expected[item.id].expiry_source)
         for item in ingredients
     ):
         raise ValueError("inventory_changed")
@@ -102,6 +108,7 @@ async def bulk_action_ingredients(
                 refrigerator_name=refrigerator.name, ingredient_id=item.id,
                 action_type=ActionType.DISPOSED, ingredient_name=item.name,
                 quantity=item.quantity, unit=item.unit, expiry_date=item.expiry_date,
+                expiry_source=item.expiry_source,
                 memo=data.memo.strip() or None if data.memo else None,
             ))
         await db.delete(item)
@@ -150,6 +157,7 @@ async def consume_or_dispose_ingredient(
         quantity=log_quantity,
         unit=ingredient.unit,
         expiry_date=ingredient.expiry_date,
+        expiry_source=ingredient.expiry_source,
         memo=data.memo,
     )
     db.add(log)
@@ -174,6 +182,7 @@ async def search_ingredients(
             Ingredient.quantity,
             Ingredient.unit,
             Ingredient.expiry_date,
+            Ingredient.expiry_source,
             StorageBox.name.label("box_name"),
             StorageBox.type.label("box_type"),
             Refrigerator.name.label("fridge_name"),
@@ -196,6 +205,7 @@ async def search_ingredients(
             quantity=row.quantity,
             unit=row.unit,
             expiry_date=row.expiry_date,
+            expiry_source=row.expiry_source,
             storage_box_name=row.box_name,
             storage_box_type=row.box_type,
             refrigerator_name=row.fridge_name,

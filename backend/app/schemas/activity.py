@@ -1,3 +1,4 @@
+from app.schemas.ingredient import ExpirySource
 from datetime import date, datetime
 from typing import Literal
 
@@ -39,6 +40,7 @@ class ActivityItem(BaseModel):
     actor_name: str
     is_mine: bool
     expiry_date: date | None
+    expiry_source: ExpirySource = "unknown"
     memo: str | None
     created_at: datetime
 

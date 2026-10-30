@@ -1,3 +1,6 @@
+export type ExpirySource = 'unknown' | 'label' | 'estimated' | 'untracked'
+export interface ExpiryValue { expiry_date: string | null; expiry_source: ExpirySource }
+
 export interface Ingredient {
   id: number
   storage_box_id: number
@@ -5,6 +8,7 @@ export interface Ingredient {
   quantity: number
   unit: string
   expiry_date: string | null
+  expiry_source?: ExpirySource
 }
 
 export interface IngredientCreate {
@@ -12,6 +16,7 @@ export interface IngredientCreate {
   quantity: number
   unit?: string
   expiry_date?: string | null
+  expiry_source?: ExpirySource
 }
 
 export interface IngredientUpdate {
@@ -19,6 +24,7 @@ export interface IngredientUpdate {
   quantity?: number
   unit?: string
   expiry_date?: string | null
+  expiry_source?: ExpirySource
 }
 
 export interface ConsumeDisposeRequest {

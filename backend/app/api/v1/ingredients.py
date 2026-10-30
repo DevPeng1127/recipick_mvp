@@ -103,7 +103,10 @@ async def update(
     storage_box: StorageBox = Depends(require_storage_box_member),
     db: AsyncSession = Depends(get_db),
 ):
-    ingredient = await update_ingredient(ingredient_id, storage_box_id, data, db)
+    try:
+        ingredient = await update_ingredient(ingredient_id, storage_box_id, data, db)
+    except ValueError as error:
+        raise HTTPException(422, detail=str(error))
     if ingredient is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ingredient not found")
     return ingredient

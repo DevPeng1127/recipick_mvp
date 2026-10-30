@@ -1,3 +1,4 @@
+import { expiryText } from '../constants/expiry'
 import { useEffect, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { getActivity } from '../api/activity'
@@ -108,7 +109,7 @@ export default function MyPage() {
             <h3 className="font-bold mt-2 break-words">{item.ingredient_name}</h3></div>
             <p className="font-semibold text-right break-words max-w-[45%]">{quantityFormat.format(item.quantity)} {item.unit}</p></div>
           <p className="text-sm text-gray-600 mt-2 break-words">{item.refrigerator_name}{item.refrigerator_id === null && ' (삭제된 냉장고)'} · {item.actor_name}{item.is_mine && ' (나)'}</p>
-          <p className="text-xs text-gray-500 mt-1"><time dateTime={item.created_at}>{timeFormat.format(new Date(item.created_at))}</time> · 한국 시간{item.expiry_date && ` · 당시 유통기한 ${item.expiry_date}`}</p>
+          <p className="text-xs text-gray-500 mt-1"><time dateTime={item.created_at}>{timeFormat.format(new Date(item.created_at))}</time> · 한국 시간{item.expiry_date && ` · 당시 ${expiryText(item.expiry_date, item.expiry_source)}`}</p>
           {item.memo && <details className="text-sm mt-3"><summary className="cursor-pointer text-gray-600">메모 보기</summary><p className="whitespace-pre-wrap break-words mt-2 text-gray-700">{item.memo}</p></details>}
         </li>)}</ul>}
       </section>

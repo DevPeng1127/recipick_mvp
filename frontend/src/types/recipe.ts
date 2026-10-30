@@ -1,3 +1,4 @@
+import type { ExpirySource } from './ingredient'
 export interface RecipeRecommendRequest {
   refrigerator_ids: number[]
   servings?: number
@@ -14,6 +15,7 @@ export interface CookingStock {
   quantity: number
   unit: string
   expiry_date: string | null
+  expiry_source?: ExpirySource
   refrigerator_id: number
   refrigerator_name: string
   storage_box_name: string

@@ -117,6 +117,7 @@ def assert_operation(before, after, action, *, quantity, user_id=1, memo=None):
         "quantity": original["quantity"] if full else quantity,
         "unit": original["unit"],
         "expiry_date": original["expiry_date"],
+        "expiry_source": original["expiry_source"],
         "memo": memo,
     }
 
@@ -133,7 +134,7 @@ async def test_partial_operation_commits_quantity_and_exact_history(
     assert response.status_code == 200
     assert response.json() == {
         "id": 1000, "storage_box_id": 100, "name": "당근", "quantity": 4.25,
-        "unit": "kg", "expiry_date": "2026-12-31",
+        "unit": "kg", "expiry_date": "2026-12-31", "expiry_source": "unknown",
     }
     assert_operation(before, await snapshot(inventory_sessions), action,
                      quantity=1.25, user_id=user_id, memo="일부 처리")

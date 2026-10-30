@@ -1,6 +1,7 @@
+import ExpiryInput from './ExpiryInput'
 import { useEffect, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
-import type { Ingredient, IngredientUpdate } from '../../types/ingredient'
+import type { Ingredient, IngredientUpdate, ExpirySource } from '../../types/ingredient'
 import { UNIT_OPTIONS, CUSTOM_UNIT_OPTION } from '../../constants/ingredients'
 import Modal from '../common/Modal'
 import { useToastStore } from '../../stores/useToastStore'
@@ -24,6 +25,7 @@ export default function EditIngredientModal({
   const [quantity, setQuantity] = useState(1)
   const [unit, setUnit] = useState('개')
   const [expiryDate, setExpiryDate] = useState('')
+  const [expirySource, setExpirySource] = useState<ExpirySource>('unknown')
   const [isCustomUnit, setIsCustomUnit] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -44,6 +46,7 @@ export default function EditIngredientModal({
       setQuantity(ingredient.quantity)
       setUnit(ingredient.unit)
       setExpiryDate(ingredient.expiry_date ?? '')
+      setExpirySource(ingredient.expiry_source ?? 'unknown')
       setIsCustomUnit(!UNIT_OPTIONS.includes(ingredient.unit as typeof UNIT_OPTIONS[number]))
     }
   }, [isOpen, ingredient])
@@ -57,7 +60,7 @@ export default function EditIngredientModal({
     busyRef.current = true; setBusy(true); setError('')
     try {
       if (action === 'delete') await onDelete()
-      else await onSave({ name: name.trim(), quantity, unit: unit.trim(), expiry_date: expiryDate || null })
+      else await onSave({ name: name.trim(), quantity, unit: unit.trim(), expiry_date: expiryDate || null, expiry_source: expirySource })
       if (mounted.current) {
         useToastStore.getState().addToast('success', action === 'delete' ? '식재료가 삭제되었습니다. 소비·폐기 통계에는 반영되지 않습니다.' : '식재료가 수정되었습니다.')
         onClose()
@@ -93,6 +96,7 @@ export default function EditIngredientModal({
       setQuantity(1)
       return
     }
+    if (['label', 'estimated'].includes(expirySource) && !expiryDate) { setError('기한 날짜를 입력하거나 기한 미입력을 선택해 주세요.'); return }
     await perform('save')
   }
 
@@ -175,16 +179,9 @@ export default function EditIngredientModal({
             )}
           </div>
         </div>
-        <div>
-          <label htmlFor="edit-ingredient-expiry" className="block text-sm font-medium text-gray-700 mb-1">소비기한</label>
-          <input
-            id="edit-ingredient-expiry"
-            type="date"
-            value={expiryDate}
-            onChange={(e) => setExpiryDate(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-        </div>
+        <ExpiryInput value={{ expiry_date: expiryDate || null, expiry_source: expirySource }}
+          onChange={value => { setExpiryDate(value.expiry_date ?? ''); setExpirySource(value.expiry_source) }} />
+        <p className="text-xs text-gray-500">기존 기한은 자동으로 다시 계산하지 않습니다.</p>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <div className="flex gap-3 justify-end pt-2">
           <button

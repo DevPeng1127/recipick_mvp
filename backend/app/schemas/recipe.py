@@ -1,3 +1,4 @@
+from app.schemas.ingredient import ExpirySource
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
@@ -38,6 +39,7 @@ class CookingStock(BaseModel):
     quantity: float
     unit: str
     expiry_date: date | None
+    expiry_source: ExpirySource = "unknown"
     refrigerator_id: int
     refrigerator_name: str
     storage_box_name: str

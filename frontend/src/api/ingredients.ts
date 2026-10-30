@@ -1,3 +1,4 @@
+import type { ExpirySource } from '../types/ingredient'
 import type { BulkIngredientActionRequest, ConsumeDisposeRequest, Ingredient, IngredientCreate, IngredientUpdate } from '../types/ingredient'
 import type { StorageType } from '../types/storage'
 import client from './client'
@@ -8,6 +9,7 @@ export interface IngredientSearchResult {
   quantity: number
   unit: string
   expiry_date: string | null
+  expiry_source?: ExpirySource
   storage_box_name: string
   storage_box_type: StorageType
   refrigerator_name: string

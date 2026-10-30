@@ -1,3 +1,5 @@
+import ExpiryInput from './ExpiryInput'
+import { recommendExpiry, todayKst } from '../../constants/expiry'
 import { useEffect, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { previewReceipt, type ReceiptItem } from '../../api/receiptImport'
@@ -5,7 +7,7 @@ import { previewVoice } from '../../api/voiceImport'
 import { previewRefrigeratorImport } from '../../api/ingredientImport'
 import type { StorageBox } from '../../types/storage'
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder'
-import type { IngredientCreate } from '../../types/ingredient'
+import type { IngredientCreate, ExpirySource } from '../../types/ingredient'
 
 export type ImportPanelProps = {
   disabled?: boolean
@@ -17,7 +19,9 @@ export type ImportPanelProps = {
 interface Candidate extends Omit<ReceiptItem, 'quantity' | 'unit'> {
   quantity: string
   unit: string
-  expiry_date: string
+  expiry_date: string | null
+  expiry_source: ExpirySource
+  expiry_manual: boolean
   selected: boolean
   storage_box_id: string
 }
@@ -44,7 +48,11 @@ export default function IngredientImportPanel({ storageBoxId, refrigeratorId, st
   const [photo, setFile] = useState<File | null>(null)
   const file = isVoice ? recording.file : photo
   const [imageUrl, setImageUrl] = useState('')
-  const [candidates, setCandidates] = useState<Candidate[] | null>(null)
+  const [storedCandidates, setCandidates] = useState<Candidate[] | null>(null)
+  const [baseDate] = useState(todayKst)
+  const candidates = storedCandidates?.map(item => item.expiry_manual ? item : {
+    ...item, ...recommendExpiry(item.name, storageBoxes?.find(box => box.id === Number(item.storage_box_id))?.type, baseDate),
+  }) ?? null
   const [hasMore, setHasMore] = useState(false)
   const [busy, setBusy] = useState<'analyzing' | 'saving' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -95,7 +103,7 @@ export default function IngredientImportPanel({ storageBoxId, refrigeratorId, st
       if (!mounted.current) return
       setCandidates(result.items.map(item => ({
         ...item, quantity: item.quantity === null ? '' : String(item.quantity),
-        unit: item.unit ?? '', expiry_date: '', selected: true,
+        unit: item.unit ?? '', expiry_date: null, expiry_source: 'unknown', expiry_manual: false, selected: true,
         storage_box_id: storageBoxId === undefined ? '' : String(storageBoxId),
       })))
       setHasMore(result.has_more)
@@ -126,6 +134,9 @@ export default function IngredientImportPanel({ storageBoxId, refrigeratorId, st
         || !Number.isFinite(quantity) || quantity <= 0 || !item.unit.trim() || item.unit.trim().length > 20) {
         setError('선택한 항목의 이름, 0보다 큰 수량, 단위를 확인해 주세요.'); return
       }
+      if (['label', 'estimated'].includes(item.expiry_source) && !item.expiry_date) {
+        setError('기한 날짜를 입력하거나 기한 미입력을 선택해 주세요.'); return
+      }
       if (item.expiry_date && !/^\d{4}-\d{2}-\d{2}$/.test(item.expiry_date)) {
         setError('유통기한을 확인해 주세요.'); return
       }
@@ -135,7 +146,7 @@ export default function IngredientImportPanel({ storageBoxId, refrigeratorId, st
     try {
       await onSave(selected.map(item => ({
         name: item.name.trim(), quantity: Number(item.quantity), unit: item.unit.trim(),
-        expiry_date: item.expiry_date || null,
+        expiry_date: item.expiry_date || null, expiry_source: item.expiry_source,
         ...(refrigeratorId !== undefined ? { storage_box_id: Number(item.storage_box_id) } : {}),
       })))
       if (mounted.current) onClose()
@@ -213,7 +224,8 @@ export default function IngredientImportPanel({ storageBoxId, refrigeratorId, st
       {!!candidates?.length && (
         <div className="mt-6">
           <h3 className="font-medium text-gray-800">인식 결과 확인 · {candidates.length}개</h3>
-          <p className="text-sm text-gray-500 mt-1 mb-3">{isVoice ? '말한 이름·수량·단위가 맞는지 확인하세요.' : '가격·용량과 구매 수량이 혼동되지 않았는지 확인하세요.'} 유통기한은 직접 입력할 수 있습니다.</p>
+          <p className="text-sm text-gray-500 mt-1 mb-3">{isVoice ? '말한 이름·수량·단위가 맞는지 확인하세요.' : '가격·용량과 구매 수량이 혼동되지 않았는지 확인하세요.'} 보관함을 지정하면 기준이 있는 재료의 추정 사용 권장일을 자동으로 채웁니다. 제품 소비기한은 직접 입력해 주세요.</p>
+          <p className="text-xs text-gray-500 mb-3">등록 당일의 신선한 원물 기준입니다. 냉장 4℃ 이하·냉동 -18℃ 이하, 실온은 서늘하고 건조한 곳(약 10~16℃)을 전제로 합니다. 구입·개봉 시점이나 보관 상태가 다르면 날짜를 수정해 주세요. 가공·해동 제품이나 기준이 없는 재료에는 날짜를 추측하지 않습니다.</p>
           {storageBoxes && <fieldset disabled={!!busy || uncertainSave} className="mb-4 rounded-lg border border-purple-200 p-3">
             <label className="block text-sm text-gray-700">포함된 항목의 보관함 일괄 지정
               <select value={bulkBox} onChange={event => setBulkBox(event.target.value)} className="mt-2 w-full min-w-0 rounded border bg-white px-2 py-2 text-sm">
@@ -251,11 +263,12 @@ export default function IngredientImportPanel({ storageBoxId, refrigeratorId, st
                       onChange={event => edit(index, { unit: event.target.value })}
                       className="mt-1 w-full min-w-0 rounded border px-2 py-2 text-sm text-gray-800" />
                   </label>
-                  <label className="col-span-2 sm:col-span-1 text-xs text-gray-600">유통기한 (선택)
-                    <input aria-label={`유통기한 ${index + 1}`} type="date" value={item.expiry_date}
-                      onChange={event => edit(index, { expiry_date: event.target.value })}
-                      className="mt-1 w-full min-w-0 rounded border px-2 py-2 text-sm text-gray-800" />
-                  </label>
+                  <div className="col-span-2 sm:col-span-1">
+                    <ExpiryInput value={item} suffix={` ${index + 1}`}
+                      suggestion={recommendExpiry(item.name, storageBoxes?.find(box => box.id === Number(item.storage_box_id))?.type, baseDate)}
+                      onChange={value => edit(index, { ...value, expiry_manual: true })}
+                      onApplySuggestion={() => edit(index, { expiry_manual: false })} />
+                  </div>
                 </div>
                 {storageBoxes && <label className="mt-3 block text-xs text-gray-600">보관함 (필수)
                   <select aria-label={`보관함 ${index + 1}`} value={item.storage_box_id}

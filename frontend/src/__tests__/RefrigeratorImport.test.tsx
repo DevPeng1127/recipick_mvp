@@ -8,6 +8,7 @@ import ImportEntry from '../components/ingredient/ImportEntry'
 import { getRefrigerator, listRefrigerators } from '../api/refrigerators'
 import { createDistributedIngredients, getImportStorageBox, previewRefrigeratorImport } from '../api/ingredientImport'
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder'
+import { recommendExpiry } from '../constants/expiry'
 
 vi.mock('../api/refrigerators', () => ({ getRefrigerator: vi.fn(), listRefrigerators: vi.fn() }))
 vi.mock('../api/ingredientImport', () => ({ createDistributedIngredients: vi.fn(), getImportStorageBox: vi.fn(), previewRefrigeratorImport: vi.fn() }))
@@ -18,6 +19,23 @@ const boxes = [{ id: 100, refrigerator_id: 10, name: '냉장실', type: 'FRIDGE'
 const items = ['우유', '만두', '사과'].map(name => ({ name, source_text: name, quantity: 1, unit: '개', needs_review: false }))
 const apiError = (status: number) => new AxiosError('rejected', undefined, undefined, undefined, {
   status, statusText: 'Rejected', data: {}, headers: {}, config: { headers: new AxiosHeaders() },
+})
+
+it.each(['receipt', 'voice'])('recommends by assigned storage and preserves reviewed dates for %s', async mode => {
+  vi.mocked(previewRefrigeratorImport).mockResolvedValue({ items: [{ ...items[0], name: '닭고기' }], has_more: false })
+  open(`?mode=${mode}`)
+  const user = await recognize(mode === 'voice' ? '음성' : '영수증')
+  expect(screen.getByLabelText('기한 구분 1')).toHaveValue('unknown')
+  await user.selectOptions(screen.getByLabelText('보관함 1'), '100')
+  expect(screen.getByLabelText('기한 날짜 1')).toHaveValue(recommendExpiry('닭고기', 'FRIDGE').expiry_date)
+  await user.selectOptions(screen.getByLabelText('보관함 1'), '101')
+  expect(screen.getByLabelText('기한 날짜 1')).toHaveValue(recommendExpiry('닭고기', 'FREEZER').expiry_date)
+  await user.selectOptions(screen.getByLabelText('기한 구분 1'), 'label')
+  expect(screen.getByLabelText('기한 날짜 1')).toHaveValue('')
+  fireEvent.change(screen.getByLabelText('기한 날짜 1'), { target: { value: '2026-12-15' } })
+  await user.selectOptions(screen.getByLabelText('보관함 1'), '100')
+  await user.click(screen.getByRole('button', { name: '선택한 1개 등록' }))
+  expect(createDistributedIngredients).toHaveBeenCalledWith(10, [expect.objectContaining({ expiry_date: '2026-12-15', expiry_source: 'label', storage_box_id: 100 })])
 })
 
 beforeEach(() => {
@@ -72,7 +90,7 @@ it('auto-selects the only fridge and distributes reviewed rows with one save', a
   expect(await screen.findByLabelText('등록할 냉장고')).toHaveValue('10')
   const user = await recognize()
   expect(previewRefrigeratorImport).toHaveBeenCalledWith(10, 'receipt', expect.any(File), expect.any(AbortSignal))
-  expect(screen.getByLabelText('유통기한 1')).toHaveValue('')
+  expect(screen.getByLabelText('기한 구분 1')).toHaveValue('unknown')
   await user.click(screen.getByRole('button', { name: '선택한 3개 등록' }))
   expect(screen.getByRole('alert')).toHaveTextContent('모든 식재료의 보관함')
   expect(createDistributedIngredients).not.toHaveBeenCalled()
@@ -85,8 +103,8 @@ it('auto-selects the only fridge and distributes reviewed rows with one save', a
   await user.type(screen.getByLabelText('식재료 이름 1'), '수정한 우유')
   await user.click(screen.getByRole('button', { name: '선택한 2개 등록' }))
   expect(createDistributedIngredients).toHaveBeenCalledExactlyOnceWith(10, [
-    { name: '수정한 우유', quantity: 1, unit: '개', expiry_date: null, storage_box_id: 100 },
-    { name: '만두', quantity: 1, unit: '개', expiry_date: null, storage_box_id: 101 },
+    { name: '수정한 우유', quantity: 1, unit: '개', expiry_date: null, expiry_source: 'unknown', storage_box_id: 100 },
+    { name: '만두', quantity: 1, unit: '개', expiry_date: null, expiry_source: 'unknown', storage_box_id: 101 },
   ])
   expect(await screen.findByText('냉장고 복귀 완료')).toBeVisible()
 })

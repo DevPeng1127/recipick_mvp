@@ -1,3 +1,4 @@
+import { expiryText } from '../../constants/expiry'
 import { useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { consumeRecipe, getCookingPreview, repeatRecipe } from '../../api/recipes'
@@ -125,7 +126,7 @@ export default function CookingPanel({ initial, onRepeat }: { initial: CookingPr
               <label className="text-sm min-w-0">차감할 재고
                 <select aria-label={`재고 ${index + 1}`} disabled={!row.included} value={row.ingredientId} onChange={e => update(index, { ingredientId: e.target.value, quantity: '' })} className="block w-full min-w-0 border rounded-lg p-2 mt-1">
                   <option value="">재고를 선택하세요</option>
-                  {preview.stock.map(s => <option key={s.ingredient_id} value={s.ingredient_id}>{s.name} · {s.refrigerator_name}/{s.storage_box_name} · {s.quantity}{s.unit} · {s.expiry_date || '기한 없음'}</option>)}
+                  {preview.stock.map(s => <option key={s.ingredient_id} value={s.ingredient_id}>{s.name} · {s.refrigerator_name}/{s.storage_box_name} · {s.quantity}{s.unit} · {expiryText(s.expiry_date, s.expiry_source)}</option>)}
                 </select>
               </label>
               <label className="text-sm">실제 사용량 {item && `(${item.unit})`}

@@ -9,6 +9,7 @@ import { useIngredientStore } from '../stores/useIngredientStore'
 import { useToastStore } from '../stores/useToastStore'
 import * as api from '../api/ingredients'
 
+vi.mock('../api/ingredientImport', () => ({ getImportStorageBox: async () => ({ id: 10, type: 'FRIDGE' }) }))
 vi.mock('../api/ingredients')
 const ingredient = { id: 20, storage_box_id: 10, name: '잘못 등록한 우유', quantity: 2, unit: '팩', expiry_date: null }
 const failure = (status: number) => new AxiosError('rejected', undefined, undefined, undefined, {

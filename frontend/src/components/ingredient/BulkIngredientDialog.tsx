@@ -30,8 +30,8 @@ export default function BulkIngredientDialog({ action, ingredients, onConfirm, o
     if (pending.current || mustRefresh || !ingredients.length) return
     pending.current = true; setBusy(true); setError('')
     try {
-      await onConfirm({ action, items: ingredients.map(({ id, name, quantity, unit, expiry_date }) => (
-        { id, name, quantity, unit, expiry_date }
+      await onConfirm({ action, items: ingredients.map(({ id, name, quantity, unit, expiry_date, expiry_source }) => (
+        { id, name, quantity, unit, expiry_date, ...(expiry_source ? { expiry_source } : {}) }
       )), ...(action === 'dispose' ? { memo: memo.trim() || null } : {}) })
       if (mounted.current) {
         useToastStore.getState().addToast('success', `식재료 ${ingredients.length}개를 ${label}했습니다.`)

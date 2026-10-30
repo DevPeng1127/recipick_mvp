@@ -26,11 +26,11 @@ it('waits for explicit recognition and saves only after review', async () => {
   await user.click(screen.getByRole('button', { name: '음성 인식하기' }))
   await screen.findByLabelText('식재료 이름 1')
   expect(save).not.toHaveBeenCalled()
-  expect(screen.getByLabelText('유통기한 1')).toHaveValue('')
+  expect(screen.getByLabelText('기한 구분 1')).toHaveValue('unknown')
   await user.clear(screen.getByLabelText('수량 1'))
   await user.type(screen.getByLabelText('수량 1'), '3')
   await user.click(screen.getByRole('button', { name: '선택한 1개 등록' }))
-  expect(save).toHaveBeenCalledWith([{ name: '우유', quantity: 3, unit: '팩', expiry_date: null }])
+  expect(save).toHaveBeenCalledWith([{ name: '우유', quantity: 3, unit: '팩', expiry_date: null, expiry_source: 'unknown' }])
 })
 
 it('keeps the recording on provider quota failure without another automatic call', async () => {

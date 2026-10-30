@@ -25,7 +25,7 @@ export default function IngredientCard({ ingredient, onEdit, onConsume, onDispos
           <span className="font-medium text-gray-800">{ingredient.name}</span>
           <span className="text-sm text-gray-400 ml-2">{ingredient.quantity}{ingredient.unit}</span>
         </div>
-        <ExpiryBadge expiryDate={ingredient.expiry_date} />
+        <ExpiryBadge expiryDate={ingredient.expiry_date} expirySource={ingredient.expiry_source} />
       </div>
       {!selection && <KebabMenu items={menuItems} />}
     </div>

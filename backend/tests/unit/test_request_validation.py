@@ -48,7 +48,7 @@ def inventory():
     box = StorageBox(id=10, refrigerator_id=1, name="냉장실", type=StorageType.FRIDGE)
     ingredient = Ingredient(
         id=20, storage_box_id=10, name="우유", quantity=2.5, unit="L",
-        expiry_date=date(2026, 12, 31),
+        expiry_date=date(2026, 12, 31), expiry_source="unknown",
     )
     db.execute.return_value.scalar_one.return_value = fridge
     db.execute.return_value.scalar_one_or_none.return_value = ingredient

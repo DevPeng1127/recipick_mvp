@@ -1,20 +1,7 @@
+import ExpiryBadge from '../ingredient/ExpiryBadge'
 import { Link } from 'react-router-dom'
 import type { Refrigerator } from '../../types/refrigerator'
 import KebabMenu from '../common/KebabMenu'
-
-function getDday(expiryDate: string | null): { label: string; color: string } | null {
-  if (!expiryDate) return null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const expiry = new Date(expiryDate)
-  expiry.setHours(0, 0, 0, 0)
-  const diff = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (diff <= 0) return { label: `D${diff === 0 ? '-Day' : `+${Math.abs(diff)}`}`, color: 'text-red-500 bg-red-50' }
-  if (diff <= 3) return { label: `D-${diff}`, color: 'text-red-500 bg-red-50' }
-  if (diff <= 7) return { label: `D-${diff}`, color: 'text-orange-500 bg-orange-50' }
-  return { label: `D-${diff}`, color: 'text-green-600 bg-green-50' }
-}
 
 interface RefrigeratorCardProps {
   refrigerator: Refrigerator
@@ -62,19 +49,10 @@ export default function RefrigeratorCard({ refrigerator, onEdit, onDelete, onTog
       ) : (
         <ul className="space-y-1.5 mt-3">
           {topIngredients.map((ingredient, idx) => {
-            const dday = getDday(ingredient.expiry_date)
             return (
               <li key={idx} className="flex items-center justify-between text-sm">
                 <span className="text-gray-700 truncate">{ingredient.name}</span>
-                {dday ? (
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${dday.color}`}>
-                    {dday.label}
-                  </span>
-                ) : (
-                  <span className="text-xs px-1.5 py-0.5 rounded-full font-medium text-gray-400 bg-gray-50">
-                    기한없음
-                  </span>
-                )}
+                <ExpiryBadge expiryDate={ingredient.expiry_date} expirySource={ingredient.expiry_source} />
               </li>
             )
           })}

@@ -12,16 +12,17 @@ def build_recipe_prompt(
     ingredient_lines = []
     for ing in ingredients:
         days_left = ""
+        date_label = "추정 사용 권장일" if ing.expiry_source == "estimated" else "입력한 기한"
         if ing.expiry_date:
             delta = (ing.expiry_date - today).days
             if delta < 0:
-                days_left = f" (유통기한 {abs(delta)}일 지남!)"
+                days_left = f" ({date_label} {abs(delta)}일 지남 - 제품 표시와 상태 확인 필요)"
             elif delta == 0:
-                days_left = " (오늘 만료!)"
+                days_left = f" ({date_label} 오늘)"
             elif delta <= 3:
-                days_left = f" (유통기한 {delta}일 남음 - 우선 사용)"
+                days_left = f" ({date_label} {delta}일 남음 - 우선 사용)"
             else:
-                days_left = f" (유통기한 {delta}일 남음)"
+                days_left = f" ({date_label} {delta}일 남음)"
         ingredient_lines.append(f"- 재고 #{ing.id}: {ing.name} {ing.quantity}{ing.unit}{days_left}")
 
     ingredients_text = "\n".join(ingredient_lines)
@@ -51,7 +52,7 @@ def build_recipe_prompt(
 {pref_text}
 
 [요구사항]
-1. 유통기한이 임박한 재료를 우선적으로 활용하세요
+1. 입력한 기한이 임박한 재료를 우선적으로 활용하세요. 추정 사용 권장일은 안전을 보증하는 소비기한이 아니며 제품 표시와 실제 상태를 우선합니다.
 2. 알레르기 재료는 절대 사용하지 마세요
 3. 사용자의 요리 실력과 보유 도구에 맞는 레시피를 추천하세요
 4. 최대 조리 시간을 초과하지 않는 레시피를 추천하세요

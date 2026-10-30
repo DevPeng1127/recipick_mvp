@@ -118,7 +118,7 @@ async def dashboard(user_id: int, db: AsyncSession, *, days: int = 30,
         id=log.id, action_type=log.action_type, ingredient_name=log.ingredient_name,
         quantity=log.quantity, unit=log.unit, refrigerator_id=log.refrigerator_id,
         refrigerator_name=log.refrigerator_name, actor_name=nickname or '이름 없는 회원',
-        is_mine=log.user_id == user_id, expiry_date=log.expiry_date, memo=log.memo,
+        is_mine=log.user_id == user_id, expiry_date=log.expiry_date, expiry_source=log.expiry_source, memo=log.memo,
         created_at=log.created_at.replace(tzinfo=timezone.utc),
     ) for log, nickname in rows[:PAGE_SIZE]]
     next_cursor = None

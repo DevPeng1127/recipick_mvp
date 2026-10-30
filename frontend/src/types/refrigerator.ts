@@ -1,3 +1,4 @@
+import type { ExpirySource } from './ingredient'
 import type { StorageBox } from './storage'
 
 export type MemberRole = 'OWNER' | 'GUEST'
@@ -12,6 +13,7 @@ export interface RefrigeratorMember {
 export interface IngredientBrief {
   name: string
   expiry_date: string | null
+  expiry_source?: ExpirySource
 }
 
 export interface Refrigerator {

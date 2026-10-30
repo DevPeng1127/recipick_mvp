@@ -52,7 +52,7 @@ async def get_plan(plan_id: UUID, user_id: int, db: AsyncSession, *, lock=False)
 def stock_token(ingredient: Ingredient, box: StorageBox, fridge: Refrigerator):
     # Compare all meaningful visible values under a row lock, not just quantity.
     state = [ingredient.id, ingredient.name, ingredient.quantity, ingredient.unit,
-             str(ingredient.expiry_date), box.id, box.name, fridge.id, fridge.name]
+             str(ingredient.expiry_date), ingredient.expiry_source, box.id, box.name, fridge.id, fridge.name]
     return hashlib.sha256(json.dumps(state, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
 
 
@@ -116,7 +116,7 @@ def suggestions(requirements: list[dict], stock: list[CookingStock]):
 async def preview(plan_id: UUID, user_id: int, db: AsyncSession):
     plan = await get_plan(plan_id, user_id, db)
     stock = [CookingStock(ingredient_id=i.id, name=i.name, quantity=i.quantity, unit=i.unit,
-              expiry_date=i.expiry_date, refrigerator_id=f.id, refrigerator_name=f.name,
+              expiry_date=i.expiry_date, expiry_source=i.expiry_source, refrigerator_id=f.id, refrigerator_name=f.name,
               storage_box_name=b.name, token=stock_token(i, b, f))
              for i, b, f in await stock_rows(plan.refrigerator_ids, db)]
     stock.sort(key=lambda s: (s.expiry_date is None, str(s.expiry_date or ""), s.ingredient_id))
@@ -150,7 +150,7 @@ async def commit(plan_id: UUID, user_id: int, data: CookingCommit, db: AsyncSess
         remaining = Decimal(str(ingredient.quantity)) - Decimal(str(item.quantity))
         db.add(IngredientLog(user_id=user_id, refrigerator_id=fridge.id, refrigerator_name=fridge.name,
             ingredient_id=ingredient.id, ingredient_name=ingredient.name, quantity=item.quantity,
-            unit=ingredient.unit, expiry_date=ingredient.expiry_date, action_type=ActionType.CONSUMED,
+            unit=ingredient.unit, expiry_date=ingredient.expiry_date, expiry_source=ingredient.expiry_source, action_type=ActionType.CONSUMED,
             memo=f"요리: {plan.title} ({plan.servings}인분) · {plan.id}"))
         consumed.append(dict(ingredient_id=ingredient.id, name=ingredient.name, quantity=item.quantity,
                              unit=ingredient.unit, remaining_quantity=float(remaining)))

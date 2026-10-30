@@ -1,28 +1,30 @@
-import { useRef, useState } from 'react'
-import type { IngredientCreate } from '../../types/ingredient'
-import { UNIT_OPTIONS, CUSTOM_UNIT_OPTION, getExpiryDate } from '../../constants/ingredients'
+import { useState } from 'react'
+import type { IngredientCreate, ExpiryValue } from '../../types/ingredient'
+import type { StorageType } from '../../types/storage'
+import { UNIT_OPTIONS, CUSTOM_UNIT_OPTION } from '../../constants/ingredients'
+import { recommendExpiry, todayKst } from '../../constants/expiry'
+import ExpiryInput from './ExpiryInput'
 import { useToastStore } from '../../stores/useToastStore'
 
 interface IngredientFormProps {
   onSubmit: (data: IngredientCreate) => Promise<void>
+  storageType?: StorageType
 }
 
-export default function IngredientForm({ onSubmit }: IngredientFormProps) {
+export default function IngredientForm({ onSubmit, storageType }: IngredientFormProps) {
   const [formData, setFormData] = useState<IngredientCreate>({
     name: '',
     quantity: 1,
     unit: '개',
-    expiry_date: getExpiryDate(''),
   })
   const [isCustomUnit, setIsCustomUnit] = useState(false)
-  const isExpiryManuallySet = useRef(false)
+  const [baseDate, setBaseDate] = useState(todayKst)
+  const [manualExpiry, setManualExpiry] = useState<ExpiryValue | null>(null)
+  const suggestion = recommendExpiry(formData.name, storageType, baseDate)
+  const expiry = manualExpiry ?? suggestion
 
   const handleNameChange = (name: string) => {
-    const update: Partial<IngredientCreate> = { name }
-    if (!isExpiryManuallySet.current) {
-      update.expiry_date = getExpiryDate(name.trim())
-    }
-    setFormData((prev) => ({ ...prev, ...update }))
+    setFormData((prev) => ({ ...prev, name }))
   }
 
   const handleUnitSelect = (value: string) => {
@@ -43,15 +45,19 @@ export default function IngredientForm({ onSubmit }: IngredientFormProps) {
       setFormData((prev) => ({ ...prev, quantity: 1 }))
       return
     }
-    await onSubmit({ ...formData, name: formData.name.trim() })
+    if (['label', 'estimated'].includes(expiry.expiry_source) && !expiry.expiry_date) {
+      useToastStore.getState().addToast('error', '기한 날짜를 입력하거나 기한 미입력을 선택해 주세요.')
+      return
+    }
+    await onSubmit({ ...formData, ...expiry, name: formData.name.trim() })
     setFormData({
       name: '',
       quantity: 1,
       unit: '개',
-      expiry_date: getExpiryDate(''),
     })
     setIsCustomUnit(false)
-    isExpiryManuallySet.current = false
+    setManualExpiry(null)
+    setBaseDate(todayKst())
   }
 
   return (
@@ -106,15 +112,7 @@ export default function IngredientForm({ onSubmit }: IngredientFormProps) {
             <option value={CUSTOM_UNIT_OPTION}>{CUSTOM_UNIT_OPTION}</option>
           </select>
         )}
-        <input
-          type="date"
-          value={formData.expiry_date || ''}
-          onChange={(e) => {
-            isExpiryManuallySet.current = true
-            setFormData({ ...formData, expiry_date: e.target.value || null })
-          }}
-          className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
+        <ExpiryInput value={expiry} onChange={setManualExpiry} suggestion={suggestion} onApplySuggestion={() => setManualExpiry(null)} />
         <button
           type="submit"
           disabled={!formData.name.trim()}
@@ -123,6 +121,9 @@ export default function IngredientForm({ onSubmit }: IngredientFormProps) {
           추가
         </button>
       </div>
+      {expiry.expiry_source === 'estimated' && <p className="mt-3 text-xs text-gray-500">
+        등록 당일의 신선한 원물 기준입니다. 냉장 4℃ 이하·냉동 -18℃ 이하, 실온은 서늘하고 건조한 곳(약 10~16℃)을 전제로 합니다. 구입·개봉 시점이나 보관 상태가 다르면 날짜를 수정해 주세요.
+      </p>}
     </form>
   )
 }

@@ -30,6 +30,27 @@ function limited(message: string, retryAt: string | null = null) {
 }
 
 describe('Recipe rate limits through page and store', () => {
+  it('does not display or auto-retry an inconsistent menu and recovers on manual retry', async () => {
+    vi.mocked(recipeApi.recommendRecipe)
+      .mockRejectedValueOnce({ isAxiosError: true, response: { status: 502, data: {
+        detail: { code: 'inconsistent_menu', message: 'private provider response' },
+      } } })
+      .mockResolvedValueOnce({ recipe: '사용 재료: 당근 0.5개. 당근을 볶습니다.' })
+    render(<MemoryRouter><RecipePage /></MemoryRouter>)
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /테스트 냉장고/ }))
+    await user.click(screen.getByRole('button', { name: /AI 메뉴 추천받기/ }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('결과를 저장하지 않았습니다')
+    expect(screen.queryByText(/private provider/)).toBeNull()
+    expect(screen.queryByRole('button', { name: '먹은 항목 확인 · 스마트 차감' })).toBeNull()
+    expect(useRecipeStore.getState()).toMatchObject({ recipe: '', planId: null, isLoading: false })
+    expect(recipeApi.recommendRecipe).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: /AI 메뉴 추천받기/ }))
+    expect(await screen.findByText(/당근을 볶습니다/)).toBeVisible()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(recipeApi.recommendRecipe).toHaveBeenCalledTimes(2)
+  })
+
   it('restores the current cooking plan when returning through the recipes link', async () => {
     useRecipeStore.setState({ recipe: '이전 레시피', planId: 'saved-plan' })
     vi.mocked(recipeApi.getCookingPreview).mockResolvedValue({

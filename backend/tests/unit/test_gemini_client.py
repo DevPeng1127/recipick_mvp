@@ -59,8 +59,8 @@ def completed_response(parts):
 
 async def test_recipe_graph_calls_flash_lite_and_returns_complete_recipe(mock_gemini, caplog):
     caplog.set_level(logging.INFO, logger="httpx")
-    recipe = "## 두부 구이\n\n1. 두부를 썰어 굽습니다."
-    encoded = json.dumps({"title": "두부 구이", "recipe": recipe,
+    encoded = json.dumps({"dishes": [{"main_ingredients": [0], "method": "구이",
+                                     "steps": ["{0}를 썰어 굽습니다."]}], "notes": "",
                           "requirements": [{"ingredient_name": "두부", "quantity": 1, "unit": "개"}]})
     requests = mock_gemini(httpx.Response(200, json=completed_response([
         {"text": encoded[:40]}, {"text": encoded[40:], "thoughtSignature": "opaque-signature"},
@@ -70,7 +70,8 @@ async def test_recipe_graph_calls_flash_lite_and_returns_complete_recipe(mock_ge
 
     result = await run_recipe_graph(ingredients, preference, user_id=1)
 
-    assert result.recipe == recipe
+    assert result.title == "두부 구이"
+    assert "두부: 1개" in result.recipe and "1. 두부를 썰어 굽습니다." in result.recipe
     assert result.requirements[0].quantity == 1
     assert len(requests) == 1
     request = requests[0]
@@ -89,6 +90,8 @@ async def test_recipe_graph_calls_flash_lite_and_returns_complete_recipe(mock_ge
     assert "30분" in prompt
     assert payload["generationConfig"]["temperature"] == 1.0
     assert payload["generationConfig"]["responseMimeType"] == "application/json"
+    schema = payload["generationConfig"]["responseJsonSchema"]
+    assert set(schema["properties"]) == {"requirements", "dishes", "notes"}
     assert payload["generationConfig"]["maxOutputTokens"] == 2048
     assert "thinkingConfig" not in payload["generationConfig"]
     assert request.extensions["timeout"]["read"] == 30.0

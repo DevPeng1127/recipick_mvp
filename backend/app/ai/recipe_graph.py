@@ -3,6 +3,7 @@ from typing import TypedDict
 from langgraph.graph import END, StateGraph
 
 from app.ai.gemini_client import call_gemini
+from app.ai.menu import MenuDraft, compile_menu
 from app.ai.prompts import build_recipe_prompt
 from app.models.ingredient import Ingredient
 from app.models.user import UserPreference
@@ -34,12 +35,13 @@ def build_prompt(state: RecipeState) -> dict:
 
 async def call_gemini_node(state: RecipeState) -> dict:
     response = await call_gemini(state["prompt"], user_id=state["user_id"],
-                                 response_schema=GeneratedRecipe.model_json_schema())
+                                 response_schema=MenuDraft.model_json_schema())
     return {"raw_response": response}
 
 
 def parse_response(state: RecipeState) -> dict:
-    return {"recipe": GeneratedRecipe.model_validate_json(state["raw_response"])}
+    return {"recipe": compile_menu(state["raw_response"], servings=state["servings"],
+                                  inventory_names=[item.name for item in state["ingredients"]])}
 
 
 def build_recipe_graph() -> StateGraph:

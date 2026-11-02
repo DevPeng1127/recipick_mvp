@@ -12,6 +12,10 @@ interface RecipeState {
 }
 
 function recommendationError(error: unknown): string {
+  if (isAxiosError(error) && error.response?.status === 502 &&
+      error.response.data?.detail?.code === 'inconsistent_menu') {
+    return '메뉴 내용의 일관성을 확인하지 못해 결과를 저장하지 않았습니다. 다시 추천받기를 눌러 주세요.'
+  }
   if (isAxiosError(error) && error.response?.status === 429) {
     const detail = error.response.data?.detail
     const message = typeof detail?.message === 'string'

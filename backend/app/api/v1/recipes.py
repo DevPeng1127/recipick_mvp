@@ -3,6 +3,7 @@ from typing import Annotated
 
 from pydantic import ValidationError
 from app.ai.gemini_client import GeminiRequestError
+from app.ai.menu import MenuConsistencyError
 from app.services import cooking_service
 from app.schemas.recipe import CookingCommit, CookingPreview
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -47,6 +48,11 @@ async def recommend(
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=exc.detail(), headers=headers
         ) from exc
+    except MenuConsistencyError:
+        raise HTTPException(502, {
+            "code": "inconsistent_menu",
+            "message": "메뉴 내용의 일관성을 확인하지 못해 결과를 저장하지 않았습니다. 다시 추천받기를 눌러 주세요.",
+        }) from None
     except (ValidationError, GeminiRequestError):
         raise HTTPException(502, "메뉴 추천 결과를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.") from None
     return result

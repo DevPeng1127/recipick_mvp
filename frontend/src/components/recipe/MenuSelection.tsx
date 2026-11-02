@@ -1,3 +1,4 @@
+import HelpDisclosure from '../common/HelpDisclosure'
 import { useEffect, useState } from 'react'
 import { getMenuInventory } from '../../api/recipes'
 import { expiryText } from '../../constants/expiry'
@@ -74,19 +75,20 @@ export default function MenuSelection({ refrigerators, busy, onRecommend }: Prop
       </button>)}
     </div>
     {selectedIds.length > 0 && <section aria-label="우선 활용 재료" className="space-y-3">
-      <div className="flex flex-wrap gap-2 justify-between items-center">
-        <h2 className="font-semibold text-gray-800">우선 활용할 재료 · {chosen.length}개 선택</h2>
-        <button type="button" disabled={busy || loading} className="text-xs text-purple-700 underline disabled:opacity-50"
-          onClick={() => { setPriorities(new Set()); setRevision(value => value + 1) }}>목록 새로고침 (선택 초기화)</button>
-      </div>
-      <p className="text-sm text-gray-600">선택하지 않아도 냉장고 전체에서 추천합니다. 최대 30개를 우선 요청할 수 있고, 어울리지 않으면 나누거나 제외 이유를 알려드립니다.</p>
+      <HelpDisclosure label="우선 활용 재료" title={<h2 className="font-semibold text-gray-800">우선 활용할 재료 · {chosen.length}개 선택</h2>}
+        action={<button type="button" disabled={busy || loading} className="text-xs text-purple-700 underline disabled:opacity-50"
+          onClick={() => { setPriorities(new Set()); setRevision(value => value + 1) }}>목록 새로고침 (선택 초기화)</button>}>
+        <p>선택하지 않아도 냉장고 전체에서 추천합니다. 최대 30개를 우선 요청할 수 있고, 어울리지 않으면 나누거나 제외 이유를 알려드립니다.</p>
+      </HelpDisclosure>
       {loading && <p role="status">재료 목록을 불러오는 중…</p>}
       {current?.error && <p role="alert" className="text-sm text-red-600">{current.error}</p>}
       {data && <>
         {items.length === 0 ? <p className="text-sm text-gray-500">선택한 냉장고에 재료가 없습니다.</p> : <>
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
-            <h3 className="font-medium">기한이 가까운 재료부터 활용해 볼까요?</h3>
-            <p className="text-xs text-gray-600">한국 날짜 {data.as_of} 기준 오늘~3일 남은 재료입니다. 추정 권장일과 제품 소비기한을 구분하며, 제품 표시·개봉 및 보관 상태를 먼저 확인해 주세요.</p>
+            <HelpDisclosure label="임박 재료 기준" title={<h3 className="font-medium">기한이 가까운 재료 · 3일 이내</h3>}>
+              <p>한국 날짜 {data.as_of} 기준 오늘~3일 남은 재료입니다. 추정 권장일과 제품 소비기한을 구분해 표시합니다.</p>
+            </HelpDisclosure>
+            <p className="text-xs text-gray-600">제품 표시·개봉 및 보관 상태를 먼저 확인해 주세요.</p>
             {grouped.soon.length ? <>
               <div className="grid sm:grid-cols-2 gap-2 max-h-80 overflow-y-auto">{grouped.soon.map(item => row(item))}</div>
               <button type="button" disabled={busy || grouped.soon.every(item => priorities.has(item.ingredient_id)) || chosen.length >= 30}
@@ -119,6 +121,5 @@ export default function MenuSelection({ refrigerators, busy, onRecommend }: Prop
     <RecipeRecommendButton isLoading={busy} selectedCount={selectedIds.length}
       disabled={!data || items.length === 0 || loading || !!current?.error}
       onClick={() => { void onRecommend(selectedIds, servings, chosen.map(item => item.ingredient_id)) }} />
-    <p className="text-xs text-gray-500">추천 버튼을 눌렀을 때만 AI를 호출합니다. 사진·음성 입력과 사용 한도를 공유하며, 실제 먹은 항목은 확인 후 차감합니다.</p>
   </section>
 }

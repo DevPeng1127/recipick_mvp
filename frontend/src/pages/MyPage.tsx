@@ -1,3 +1,4 @@
+import HelpDisclosure from '../components/common/HelpDisclosure'
 import { expiryText } from '../constants/expiry'
 import { useEffect, useState } from 'react'
 import { isAxiosError } from 'axios'
@@ -51,10 +52,13 @@ export default function MyPage() {
   function refresh() { setCursors([null]); setRevision(old => old + 1) }
 
   return <div className="space-y-6 min-w-0">
-    <div className="flex flex-wrap justify-between items-start gap-3">
-      <div><h1 className="text-2xl font-bold text-gray-800">마이페이지</h1><p className="text-gray-500 mt-1">소비·폐기 기록을 돌아보세요.</p></div>
-      <button onClick={refresh} disabled={loading} className="border bg-white rounded-lg px-4 py-2 text-sm disabled:opacity-50">새로고침</button>
-    </div>
+    <HelpDisclosure label="소비·폐기 기록" title={<h1 className="text-2xl font-bold text-gray-800">마이페이지</h1>}
+      action={<button onClick={refresh} disabled={loading} className="border bg-white rounded-lg px-4 py-2 text-sm disabled:opacity-50">새로고침</button>}>
+      <p>{filters.refrigeratorId === null
+        ? '내가 직접 처리한 기록입니다. 탈퇴하거나 삭제된 냉장고의 내 기록도 포함합니다.'
+        : '이 냉장고의 가족 전체 기록입니다. 가입 전 기록과 메모도 포함하며, 현재 회원만 조회할 수 있습니다.'}</p>
+      <p>재료별 처리 기록 1개를 1건으로 셉니다. 요리 1회에 재료 3개를 차감하면 3건이며, 서로 다른 단위의 수량은 합산하지 않습니다. 모든 통계는 아래 필터를 따릅니다.</p>
+    </HelpDisclosure>
     <section className="grid sm:grid-cols-3 gap-4 bg-white p-4 rounded-xl border" aria-label="이력 조회 조건">
       <label className="text-sm min-w-0">기간
         <select aria-label="조회 기간" value={filters.days} onChange={e => change({ days: Number(e.target.value) as ActivityFilters['days'] })} className="block w-full mt-1 border rounded-lg p-2">
@@ -73,9 +77,6 @@ export default function MyPage() {
         </select>
       </label>
     </section>
-    <p className="text-sm text-gray-600">{filters.refrigeratorId === null
-      ? '내가 직접 처리한 기록입니다. 탈퇴하거나 삭제된 냉장고의 내 기록도 포함합니다.'
-      : '이 냉장고의 가족 전체 기록입니다. 가입 전 기록과 메모도 포함하며, 현재 회원만 조회할 수 있습니다.'}</p>
     {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
       <p role="alert" className="text-red-700">{error}</p>
       <div className="flex flex-wrap gap-4"><button className="text-purple-700 underline" onClick={refresh}>다시 불러오기</button>
@@ -92,7 +93,6 @@ export default function MyPage() {
             <p className="text-sm text-gray-500">{label}</p><p className={`text-2xl sm:text-3xl font-bold mt-2 ${color}`} aria-label={`${label} ${count}건`}>{count}<span className="text-sm font-normal ml-1">건</span></p>
           </div>)}
         </div>
-        <p className="text-xs text-gray-500">재료별 처리 기록 1개를 1건으로 셉니다. 요리 1회에 재료 3개를 차감하면 3건이며, 서로 다른 단위의 수량은 합산하지 않습니다. 모든 통계는 위 필터를 따릅니다.</p>
       </div>
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 min-w-0"><ActivityTrend days={data.daily} /></div>

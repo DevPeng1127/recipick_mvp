@@ -1,3 +1,4 @@
+import HelpDisclosure from '../common/HelpDisclosure'
 import ExpiryInput from './ExpiryInput'
 import { recommendExpiry, todayKst } from '../../constants/expiry'
 import { useEffect, useRef, useState } from 'react'
@@ -171,22 +172,20 @@ export default function IngredientImportPanel({ storageBoxId, refrigeratorId, st
 
   return (
     <section aria-label={`${label}으로 식재료 등록`} className="rounded-xl border border-purple-200 bg-purple-50/50 p-4 sm:p-6 mb-6">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800">{label}으로 등록</h2>
-          <p className="text-sm text-gray-600 mt-1">{refrigeratorId !== undefined ? '인식 결과를 확인하고 재료별 보관함을 지정해 한 번에 등록하세요.' : '인식 결과를 확인하고 수정한 뒤 현재 보관함에 등록하세요.'}</p>
-        </div>
-        <button type="button" onClick={onClose} disabled={!!busy} aria-label={`${label} 입력 닫기`}
-          className="shrink-0 text-sm text-gray-500 px-2 py-1 disabled:opacity-40">닫기</button>
-      </div>
+      <HelpDisclosure label={`${label} 등록`} className="mb-3" title={<h2 className="text-lg font-semibold text-gray-800">{label}으로 등록</h2>}
+        action={<button type="button" onClick={onClose} disabled={!!busy} aria-label={`${label} 입력 닫기`}
+          className="text-sm text-gray-500 px-2 py-1 disabled:opacity-40">닫기</button>}>
+        <p>{refrigeratorId !== undefined ? '인식 결과를 확인하고 재료별 보관함을 지정해 한 번에 등록하세요.' : '인식 결과를 확인하고 수정한 뒤 현재 보관함에 등록하세요.'}</p>
+        {isVoice && <p>예: “우유 두 팩, 계란 열 개, 사과 세 개를 등록해 줘.” 녹음 후 미리듣기와 재녹음이 가능합니다.</p>}
+        <p>사진·음성 인식과 레시피 추천은 AI 사용 한도를 공유합니다. 인식만으로 재고가 저장되지는 않습니다.</p>
+      </HelpDisclosure>
       <p className="text-xs text-gray-500 mb-4">
         {isVoice ? '인식 버튼을 누르면 녹음이 Google AI로 전송됩니다. 식재료 이름·수량·단위만 말하고 개인정보나 다른 사람의 대화는 담지 마세요.'
           : '사진은 Google AI로 전송됩니다. 결제·회원 정보 등 개인정보를 제외한 상품 영역만 선택해 주세요.'}
         앱 서버에는 {isVoice ? '녹음' : '사진'}을 보관하지 않습니다. 무료 AI의 입력은 Google의 서비스 개선에 사용될 수 있습니다.
       </p>
       {isVoice ? <div>
-        <p className="text-sm text-gray-700">예: “우유 두 팩, 계란 열 개, 사과 세 개를 등록해 줘.”</p>
-        <p className="text-xs text-gray-500 mt-2">최대 60초 · 식재료 20개 · 녹음 후 미리듣기와 재녹음 가능</p>
+        <p className="text-xs text-gray-500">최대 60초 · 식재료 20개</p>
         <div className="flex flex-wrap items-center gap-3 mt-4">
           {recording.status === 'recording' ? <button type="button" onClick={recording.stop}
             className="rounded-lg bg-red-600 px-4 py-2 text-white">녹음 끝내기</button>
@@ -217,15 +216,17 @@ export default function IngredientImportPanel({ storageBoxId, refrigeratorId, st
         className="mt-4 rounded-lg bg-purple-600 px-4 py-2 text-white disabled:opacity-50">
         {busy === 'analyzing' ? (isVoice ? '음성을 읽고 있어요...' : '사진을 읽고 있어요...') : (isVoice ? '음성 인식하기' : '사진 인식하기')}
       </button>
-      <p className="text-xs text-gray-500 mt-2">사진·음성 인식과 레시피 추천은 AI 사용 한도를 공유합니다. 인식만으로 재고가 저장되지는 않습니다.</p>
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {candidates?.length === 0 && <p className="mt-4 text-sm text-gray-600">등록할 식재료를 찾지 못했습니다. {isVoice ? '식재료 이름과 수량을 또렷하게 말하고 다시 시도해 주세요.' : '상품명이 잘 보이는 사진으로 다시 시도해 주세요.'}</p>}
       {hasMore && <p role="status" className="mt-4 text-sm text-amber-800">식재료가 20개를 초과했습니다. 아래 항목을 확인하고 나머지는 별도로 등록해 주세요.</p>}
       {!!candidates?.length && (
         <div className="mt-6">
-          <h3 className="font-medium text-gray-800">인식 결과 확인 · {candidates.length}개</h3>
-          <p className="text-sm text-gray-500 mt-1 mb-3">{isVoice ? '말한 이름·수량·단위가 맞는지 확인하세요.' : '가격·용량과 구매 수량이 혼동되지 않았는지 확인하세요.'} 보관함을 지정하면 기준이 있는 재료의 추정 사용 권장일을 자동으로 채웁니다. 제품 소비기한은 직접 입력해 주세요.</p>
-          <p className="text-xs text-gray-500 mb-3">등록 당일의 신선한 원물 기준입니다. 냉장 4℃ 이하·냉동 -18℃ 이하, 실온은 서늘하고 건조한 곳(약 10~16℃)을 전제로 합니다. 구입·개봉 시점이나 보관 상태가 다르면 날짜를 수정해 주세요. 가공·해동 제품이나 기준이 없는 재료에는 날짜를 추측하지 않습니다.</p>
+          <HelpDisclosure label="인식 결과 확인" className="mb-3" title={<h3 className="font-medium text-gray-800">인식 결과 확인 · {candidates.length}개</h3>}>
+            <p>{isVoice ? '말한 이름·수량·단위가 맞는지 확인하세요.' : '가격·용량과 구매 수량이 혼동되지 않았는지 확인하세요.'} 보관함을 지정하면 기준이 있는 재료의 추정 사용 권장일을 자동으로 채웁니다. 제품 소비기한은 직접 입력해 주세요.</p>
+            <p>등록 당일의 신선한 원물 기준입니다. 냉장 4℃ 이하·냉동 -18℃ 이하, 실온은 서늘하고 건조한 곳(약 10~16℃)을 전제로 합니다. 구입·개봉 시점이나 보관 상태가 다르면 날짜를 수정해 주세요. 가공·해동 제품이나 기준이 없는 재료에는 날짜를 추측하지 않습니다.</p>
+            {storageBoxes && <p>보관함 일괄 지정은 체크한 항목에 적용합니다. 각 항목에서 보관함을 따로 바꿀 수도 있습니다.</p>}
+          </HelpDisclosure>
+          <p className="text-sm text-gray-500 mb-3">이름·수량·보관함·기한을 확인한 뒤 등록해 주세요.</p>
           {storageBoxes && <fieldset disabled={!!busy || uncertainSave} className="mb-4 rounded-lg border border-purple-200 p-3">
             <label className="block text-sm text-gray-700">포함된 항목의 보관함 일괄 지정
               <select value={bulkBox} onChange={event => setBulkBox(event.target.value)} className="mt-2 w-full min-w-0 rounded border bg-white px-2 py-2 text-sm">
@@ -236,7 +237,6 @@ export default function IngredientImportPanel({ storageBoxId, refrigeratorId, st
             <button type="button" disabled={!selectedCount || !storageBoxes.some(box => box.id === Number(bulkBox))}
               onClick={() => { setCandidates(current => current?.map(item => item.selected ? { ...item, storage_box_id: bulkBox } : item) ?? null); setError(null) }}
               className="mt-2 rounded-lg border border-purple-300 bg-white px-3 py-2 text-sm text-purple-700 disabled:opacity-40">포함된 {selectedCount}개에 적용</button>
-            <p className="mt-2 text-xs text-gray-500">아래 체크한 항목에 적용합니다. 각 항목에서 보관함을 따로 바꿀 수도 있습니다.</p>
           </fieldset>}
           <div className="space-y-3">
             {candidates.map((item, index) => (

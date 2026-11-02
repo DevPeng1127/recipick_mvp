@@ -1,3 +1,4 @@
+import HelpDisclosure from '../components/common/HelpDisclosure'
 import { useEffect, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -73,8 +74,9 @@ function ImportSession() {
 
   const returnTo = context ? (defaultBox ? `/storage-boxes/${defaultBox}` : `/refrigerators/${context.id}`) : '/dashboard'
   return <div className="mx-auto max-w-3xl">
-    <h1 className="mb-2 text-2xl font-bold text-gray-800">식재료 자동 입력</h1>
-    <p className="mb-5 text-sm text-gray-600">냉장고를 선택하고 {mode === 'voice' ? '녹음' : '영수증 사진'}으로 여러 보관함에 나누어 등록하세요.</p>
+    <HelpDisclosure label="식재료 자동 입력" className="mb-5" title={<h1 className="text-2xl font-bold text-gray-800">식재료 자동 입력</h1>}>
+      <p>냉장고를 선택하고 {mode === 'voice' ? '녹음' : '영수증 사진'}으로 여러 보관함에 나누어 등록하세요.</p>
+    </HelpDisclosure>
     {loading ? <LoadingSpinner /> : !context ? <div className="rounded-xl border bg-white p-4 sm:p-6">
       {!!fridges.length && <>
         <label className="block text-sm text-gray-700">등록할 냉장고

@@ -1,3 +1,4 @@
+import HelpDisclosure from '../common/HelpDisclosure'
 import { useState } from 'react'
 import type { IngredientCreate, ExpiryValue } from '../../types/ingredient'
 import type { StorageType } from '../../types/storage'
@@ -121,9 +122,9 @@ export default function IngredientForm({ onSubmit, storageType }: IngredientForm
           추가
         </button>
       </div>
-      {expiry.expiry_source === 'estimated' && <p className="mt-3 text-xs text-gray-500">
-        등록 당일의 신선한 원물 기준입니다. 냉장 4℃ 이하·냉동 -18℃ 이하, 실온은 서늘하고 건조한 곳(약 10~16℃)을 전제로 합니다. 구입·개봉 시점이나 보관 상태가 다르면 날짜를 수정해 주세요.
-      </p>}
+      {expiry.expiry_source === 'estimated' && <HelpDisclosure label="보관 기한" className="mt-3" title={<span className="text-xs text-gray-500">추정 사용 권장일 기준</span>}>
+        <p>등록 당일의 신선한 원물 기준입니다. 냉장 4℃ 이하·냉동 -18℃ 이하, 실온은 서늘하고 건조한 곳(약 10~16℃)을 전제로 합니다. 구입·개봉 시점이나 보관 상태가 다르면 날짜를 수정해 주세요.</p>
+      </HelpDisclosure>}
     </form>
   )
 }

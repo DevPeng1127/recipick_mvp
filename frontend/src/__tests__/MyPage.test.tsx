@@ -49,7 +49,10 @@ it('defaults to 30 days and personal records, showing counts and original units'
   expect(within(list).getByText('2 개')).toBeVisible()
   expect(within(list).getByText(/옛 냉장고 \(삭제된 냉장고\)/)).toBeVisible()
   expect(within(list).getByText(/2026. 10. 29. 오전 12:00/)).toBeVisible()
+  expect(screen.getByText(/재료별 처리 기록 1개를 1건/)).not.toBeVisible()
+  await userEvent.click(screen.getByRole('button', { name: '소비·폐기 기록 도움말' }))
   expect(screen.getByText(/재료별 처리 기록 1개를 1건/)).toBeVisible()
+  expect(api.getActivity).toHaveBeenCalledTimes(1)
 })
 
 it('shows exact daily values and history memos through accessible details', async () => {
@@ -68,6 +71,7 @@ it('changes period, family scope, and action filters without merging data', asyn
   vi.mocked(api.getActivity).mockResolvedValue(response({ scope: 'refrigerator', refrigerator_name: '가족 냉장고' }))
   await user.selectOptions(screen.getByLabelText('조회 범위'), '10')
   expect(await screen.findByRole('heading', { name: '가족 냉장고 · 가족 기록 요약' })).toBeVisible()
+  await user.click(screen.getByRole('button', { name: '소비·폐기 기록 도움말' }))
   expect(screen.getByText(/가입 전 기록과 메모도 포함/)).toBeVisible()
   await user.selectOptions(screen.getByLabelText('처리 유형'), 'DISPOSED')
   await waitFor(() => expect(api.getActivity).toHaveBeenLastCalledWith({ days: 7, refrigeratorId: 10, actionType: 'DISPOSED' }, null, expect.any(AbortSignal)))

@@ -1,3 +1,4 @@
+import HelpDisclosure from '../components/common/HelpDisclosure'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getCookingPreview } from '../api/recipes'
@@ -61,8 +62,10 @@ export default function RecipePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">AI 메뉴 추천</h1>
-      <p className="text-sm text-gray-500 mb-6">냉장고 속 음식으로 오늘 먹을 메뉴를 골라보세요. 완제품은 간편하게, 조리가 필요하면 레시피까지 안내합니다.</p>
+      <HelpDisclosure label="메뉴 추천" className="mb-6" title={<h1 className="text-2xl font-bold text-gray-800">AI 메뉴 추천</h1>}>
+        <p>냉장고 속 음식으로 오늘 먹을 메뉴를 골라보세요. 완제품은 간편하게, 조리가 필요하면 레시피까지 안내합니다.</p>
+        <p>추천 버튼을 눌렀을 때만 AI를 호출합니다. 사진·음성 입력과 사용 한도를 공유하며, 실제 먹은 항목은 확인 후 차감합니다.</p>
+      </HelpDisclosure>
       <MenuSelection refrigerators={refrigerators} busy={isLoading}
         onRecommend={async (fridges, servings, priorities) => {
           setPreview(null)

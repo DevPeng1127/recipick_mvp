@@ -1,6 +1,9 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import type { TokenResponse } from '../types/auth'
 
+// Use the same origin for ordinary requests and refresh (which bypasses interceptors).
+const apiBaseURL = (import.meta.env.VITE_API_BASE_URL?.trim() || '/api/v1').replace(/\/+$/, '')
+
 interface AuthRequest extends InternalAxiosRequestConfig {
   _retry?: boolean
   _sessionId?: number
@@ -43,7 +46,7 @@ function refreshSession(session: AuthSession): Promise<void> {
     session.refreshPromise = (async () => {
       try {
         // Use bare axios so a refresh failure cannot enter this interceptor again.
-        const { data } = await axios.post<TokenResponse>('/api/v1/auth/refresh', {
+        const { data } = await axios.post<TokenResponse>(`${apiBaseURL}/auth/refresh`, {
           refresh_token: session.refreshToken,
         }, { timeout: 30_000 })
         if (getSession() !== session) throw new axios.CanceledError('Authentication session changed')
@@ -70,7 +73,7 @@ function refreshSession(session: AuthSession): Promise<void> {
 }
 
 const client = axios.create({
-  baseURL: '/api/v1',
+  baseURL: apiBaseURL,
   headers: { 'Content-Type': 'application/json' },
 })
 

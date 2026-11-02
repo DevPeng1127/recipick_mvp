@@ -1,10 +1,11 @@
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://user:password@localhost:5432/recipick"
+    DATABASE_SSL: bool = False
 
     # JWT
     JWT_SECRET_KEY: SecretStr
@@ -29,6 +30,15 @@ class Settings(BaseSettings):
     # App
     APP_ENV: str = "development"
     FRONTEND_URL: str = "http://localhost:5173"
+
+    @model_validator(mode="after")
+    def validate_production(self):
+        if self.APP_ENV == "production":
+            if not self.DATABASE_SSL:
+                raise ValueError("Production requires DATABASE_SSL=true (verified TLS).")
+            if not self.FRONTEND_URL.startswith("https://"):
+                raise ValueError("Production requires an HTTPS FRONTEND_URL.")
+        return self
 
     @field_validator("JWT_SECRET_KEY")
     @classmethod

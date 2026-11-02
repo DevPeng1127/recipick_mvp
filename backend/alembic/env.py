@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.config import settings
 from app.database.base import Base
+from app.database.tls import database_connect_args
 from app.models import *  # noqa: F401, F403 - import all models for autogenerate
 
 config = context.config
@@ -14,7 +15,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# ConfigParser treats percent-encoded passwords as interpolation unless escaped.
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 target_metadata = Base.metadata
 
@@ -46,6 +48,7 @@ async def run_async_migrations() -> None:
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=database_connect_args(settings.DATABASE_SSL),
     )
 
     async with connectable.connect() as connection:

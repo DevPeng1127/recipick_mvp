@@ -24,6 +24,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterAll(() => server.close())
 beforeEach(async () => {
   vi.resetModules()
+  vi.stubEnv('VITE_API_BASE_URL', '')
   const values = new Map<string, string>()
   vi.stubGlobal('localStorage', {
     getItem: (key: string) => values.get(key) ?? null,
@@ -42,10 +43,39 @@ beforeEach(async () => {
 afterEach(() => {
   server.resetHandlers()
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   vi.restoreAllMocks()
 })
 
 describe('API authentication refresh', () => {
+  it('uses the production API origin for the original request, refresh, and retry', async () => {
+    const productionOrigin = 'https://recipick-api.example.test'
+    vi.stubEnv('VITE_API_BASE_URL', ` ${productionOrigin}/api/v1/ `)
+    vi.resetModules()
+    const productionClient = (await import('../api/client')).default
+    const calls: string[] = []
+    server.use(
+      http.get(`${productionOrigin}/api/v1/users/me`, ({ request }) => {
+        calls.push(request.url)
+        return request.headers.get('authorization') === 'Bearer production-access'
+          ? HttpResponse.json({ id: 7 })
+          : new HttpResponse(null, { status: 401 })
+      }),
+      http.post(`${productionOrigin}/api/v1/auth/refresh`, async ({ request }) => {
+        calls.push(request.url)
+        expect(await request.json()).toEqual({ refresh_token: 'valid-refresh' })
+        return HttpResponse.json({ access_token: 'production-access', refresh_token: 'production-refresh' })
+      }),
+    )
+    expect((await productionClient.get('/users/me')).data).toEqual({ id: 7 })
+    expect(calls).toEqual([
+      `${productionOrigin}/api/v1/users/me`,
+      `${productionOrigin}/api/v1/auth/refresh`,
+      `${productionOrigin}/api/v1/users/me`,
+    ])
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
   it('shares one refresh across concurrent requests and preserves each request when retrying', async () => {
     const releaseRefresh = deferred()
     const refreshStarted = deferred()

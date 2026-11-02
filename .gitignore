@@ -18,6 +18,10 @@ node_modules/
 dist/
 .env
 .env.local
+.env.production
+.firebase/
+firebase-debug*.log
+.deploy/
 
 # OS
 .DS_Store

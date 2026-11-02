@@ -1,15 +1,26 @@
-# Recipick 첫 운영 배포
+# Recipick 운영 배포 기록
 
-현재 상태: **2026-11-02 공개 배포·소셜 로그인·사용자 첫 설정·기본 실사용 및 운영 AI 검증 완료, 테스트 재고 정리 완료, 사용자 승인으로 이번 로컬 커밋 반영**. 브랜치 `codex/cloud-deployment`, 이력 ID `DEPLOY-20261102`, 원격 미푸시. 기존 기능 브랜치의 최신 코드에서 시작했으며 오래된 `main`을 배포하지 않았다. 운영 전 기능을 다시 검증한 것과는 구분하며 아래 실제 검사 범위·한계를 따른다.
+현재 상태: **2026-11-02 메뉴 일관성 개선 `b8d8234` 재배포·운영 기본 검증 완료**. 브랜치 `codex/menu-consistency`, 구현 이력 ID `MENU-CONSISTENCY-20261102`, 배포 문서 이력 ID `MENU-RELEASE-20261102`, 원격 미푸시. 첫 배포는 `c256b5c`/`DEPLOY-20261102`이며 아래 첫 배포 과정은 과거 기록이다. 최신 리비전/검증은 다음 문단과 실제 공개 자원을 따른다.
+
+## 메뉴 일관성 개선 재배포 (2026-11-02)
+
+- 사용자가 검증 결과를 확인하고 커밋과 운영 반영을 승인했다. 코드·회귀 테스트·문서 12개를 `b8d8234`로 커밋한 뒤 동일 코드로 Linux 이미지와 운영 API 주소 프런트를 빌드했다. 기존 자동 검증은 백엔드 638개·프런트 182개·린트·타입·빌드 통과다. 앱 소스를 다시 수정하지 않아 전체 테스트를 중복 실행하지 않았으며 배포 산출물과 실제 운영을 추가 검증했다.
+- 이미지 `api:menu-b8d8234`의 소스 해시 일치·비루트 실행·개발 `.env`/테스트 제외, 외부 통신 없는 저장 응답 재생(정상 2개·양념 누락 거절)을 확인했다. 프런트 새 오류 처리·운영 주소 포함 및 알려진 비밀 값 제외 검사 통과. 정적 파일 3개를 먼저 공개하고 백엔드는 기존 서비스의 이미지 참조만 갱신했다.
+- 운영 JWT는 개발 키와 다르고 활성 Secret Manager 버전 1을 유지함을 값 출력 없이 확인했다. 기존 카카오 버전 2와 나머지 비밀 버전 1, 요청 기반 CPU·최소 0/최대 1·1CPU/1GiB·동시성 2·120초 및 다른 실행 설정을 유지했다. 새로운 마이그레이션·AI 요청·개인 설정 변경·외부 자원 생성·요금제 변경은 없다.
+- Cloud Run Ready·트래픽 100%와 실행 manifest digest를 로컬 빌드 출력에 대조했다. 첫 검증 단정문은 푸시한 OCI 인덱스 digest(`sha256:6c90f7d04d63624993c5e85e10732ea292f200bbfc9feaa71dca87077a4b3e0a`)를 Linux 실행 manifest digest와 비교해 실패했으며, 빌드가 출력한 플랫폼 manifest 기준으로 고쳐 통과했다. 배포된 코드가 달라진 문제는 아니다.
+- 공개 HTML·JS·CSS가 로컬 빌드와 바이트 단위로 일치한다. `/recipes`, `/login`, 두 OAuth 콜백 경로의 SPA 새로고침, HTML no-cache·해시 자원 immutable, API health·미인증 거절·허용/불허 CORS·두 로그인 URL의 운영 콜백을 확인했다. 기존 운영 JWT로 존재하지 않는 사용자 요청을 보내 서명 검사·Neon 조회 후 `User not found` 응답을 확인했으며 데이터 쓰기는 없다.
+- 브라우저 1280×720에서 기존 로그인 세션과 냉장고 목록 표시, 인분 1→2→1 선택, 새로고침 정상. 빈 화면/오류 오버레이 없음, 반환된 콘솔 오류/경고 0건. 검증용 임시 탭만 닫고 사용자 탭을 유지했다. 증빙: `C:/Users/pengveloper/.codex/visualizations/2026/10/23/01a16717-7b50-7211-8e19-054d43dd6b76/recipick-menu-consistency-production.jpg`.
+- 적용 범위: **새로 추천받는 메뉴부터** 제목·본문·재료·차감 연결 검증을 적용한다. 과거 저장 메뉴는 자동 변환하지 않는다. 운영에서 AI 재생성·소셜 재로그인·모바일 실기기 검증은 이번에 추가하지 않았다. 메뉴 의미/적정 인분의 한계는 기능 문서를 따른다.
+- 복구 기준: 이번 직전 Cloud Run `recipick-api-00002-9nv`와 Hosting `07c280cf4ccbd8ae`/릴리스 `1793584896159000`이다. 이전 Cloud Run도 교체된 카카오 버전 2를 사용한다. 필요 시 이 리비전으로 트래픽을 전환하고 이전 Hosting 버전을 다시 릴리스한다. 현재는 정상 검증되어 복구를 실행하지 않았다.
 
 ## 실제 공개 자원
 
 - 웹: **https://recipick-prod-1127.web.app**
 - API: **https://recipick-api-inadpqyfnq-as.a.run.app**, API 경로 `/api/v1`, 상태 확인 `/health`.
 - Google 프로젝트: `recipick-prod-1127` (`Recipick Production`), 번호 `306978637426`.
-- Cloud Run: Singapore, 서비스 `recipick-api`, 현재 리비전 `recipick-api-00002-9nv`(트래픽 100%). 최초 리비전은 `recipick-api-00001-ntg`.
-- 컨테이너: `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:20261102`, digest `sha256:d06263b59ae095d64a1c5c6020e7698327166cf42fc724465b31e28759d8bbc6`.
-- Hosting 버전: `sites/recipick-prod-1127/versions/07c280cf4ccbd8ae`, 릴리스 `1793584896159000`.
+- Cloud Run: Singapore, 서비스 `recipick-api`, 현재 리비전 **`recipick-api-menu-b8d8234`**(트래픽 100%). 직전 리비전 `recipick-api-00002-9nv`, 최초 리비전 `recipick-api-00001-ntg`.
+- 컨테이너: `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:menu-b8d8234`, 실행 manifest digest **`sha256:f052e93811a9923b3cb67a7c740cddc0aca0f3c1db48f469732c7016cf308e9a`**. 이미지 인덱스 digest와 구분한다.
+- Hosting 버전: **`sites/recipick-prod-1127/versions/ec9a514cb5197f41`**, 릴리스 **`1793600377238000`**. 공개 JS `index-De4DHigu.js`, CSS `index-Dm6spGVA.css`.
 - 월 예산: **5,000 KRW**, 해당 Google 프로젝트만, 50%·90%·100% 실제 지출 알림. 기본 결제 관리자/사용자 알림 수신 유지. **자동 차단/청구 상한이 아니다.**
 - 기존 AI/OAuth용 Google 프로젝트 `resolute-vault-478108-h0`는 결제 비활성 상태를 읽기 전용으로 확인했다. 호스팅용 새 프로젝트의 결제 연결과 분리되어 있다. AI Studio 모델 한도 자체의 실시간 확인과는 다르다.
 

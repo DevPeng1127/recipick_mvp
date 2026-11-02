@@ -34,6 +34,11 @@ PANTRY_MENTION = re.compile(
     r"(?<![가-힣A-Za-z])(" + "|".join(map(re.escape, PANTRY_NAMES)) +
     r")(?=$|[\s,.!?·/()]|으로|을|를|은|는|이|가|과|와|에|로|도|만)"
 )
+# App default approved by the user, not an official dietary recommendation.
+BEVERAGE_ML_PER_SERVING = 250
+BEVERAGE_NAME = re.compile(r"(?:주스|쥬스|과채음료|탄산음료|콜라|사이다|이온음료|스포츠음료)$")
+SPECIAL_BEVERAGE = re.compile(r"농축|원액|베이스|시럽|분말|칵테일|알코올|알콜|주류|와인|맥주|소주|영아|유아|분유|의료|단백질|보충|에너지|홍삼")
+BEVERAGE_PREPARATION = re.compile(r"희석|혼합|섞|믹스|칵테일|소스|적시|재우|끓|볶|졸|가열|갈아")
 
 
 class MenuConsistencyError(ValueError):
@@ -85,6 +90,43 @@ def _amount(need: RecipeNeed) -> str:
         return "사용량 확인 필요"
     number = format(Decimal(str(need.quantity)).normalize(), "f")
     return f"{number}{need.unit}"
+
+
+def _cap_beverage_portions(draft: MenuDraft, servings: int) -> list[str]:
+    """Lower oversized ready-to-drink sides only, after reference validation.
+
+    A requirement shared with a cooked/mixed dish is left alone: its drinking
+    share cannot be inferred from the combined quantity. Unknown names/units
+    are intentionally not guessed. Never increase a smaller proposal.
+    """
+    notices = []
+    cap_ml = BEVERAGE_ML_PER_SERVING * servings
+    for index, need in enumerate(draft.requirements):
+        name = normalized_name(need.ingredient_name)
+        if not BEVERAGE_NAME.search(name) or SPECIAL_BEVERAGE.search(name):
+            continue
+        if need.quantity is None or need.unit is None:
+            continue
+        unit = unicodedata.normalize("NFKC", need.unit).strip().casefold()
+        factor = {"ml": Decimal(1), "l": Decimal(1000)}.get(unit)
+        if factor is None or Decimal(str(need.quantity)) * factor <= cap_ml:
+            continue
+        used_in = [dish for dish in draft.dishes if any(
+            str(index) in REFERENCE.findall(step) for step in dish.steps
+        )]
+        if not used_in or any(
+            dish.main_ingredients != [index] or dish.method not in {"곁들이기", "담아내기"}
+            or any(BEVERAGE_PREPARATION.search(REFERENCE.sub("", step)) for step in dish.steps)
+            for dish in used_in
+        ):
+            continue
+        need.quantity = float(Decimal(cap_ml) / factor)
+        need.unit = "L" if unit == "l" else "ml"
+        notices.append(
+            f"{need.ingredient_name}: 곁들임 음료의 앱 기준(1인분 {BEVERAGE_ML_PER_SERVING}mL)을 적용해 "
+            f"총 {cap_ml}mL로 보정했습니다. 실제 마신 양은 차감 전에 수정할 수 있습니다."
+        )
+    return notices
 
 
 def compile_menu(raw: str, *, servings: int, inventory_names: list[str]) -> GeneratedRecipe:
@@ -154,6 +196,8 @@ def compile_menu(raw: str, *, servings: int, inventory_names: list[str]) -> Gene
     if all_used != set(range(len(needs))):
         raise MenuConsistencyError("unused_deduction_ingredient")
 
+    portion_notices = _cap_beverage_portions(draft, servings)
+
     title = " + ".join(titles)
     # Persisted titles use VARCHAR(100). Keep the full names in the body; shorten
     # only the display title for unusually long product names/multiple dishes.
@@ -164,6 +208,8 @@ def compile_menu(raw: str, *, servings: int, inventory_names: list[str]) -> Gene
         availability = "" if name in known_names else " · 재고에 없음, 별도 준비 확인"
         ingredient_lines.append(f"- {need.ingredient_name}: {_amount(need)}{availability}")
     sections = [f"사용 재료 · {servings}인분 전체 사용량\n" + "\n".join(ingredient_lines), *instructions]
+    if portion_notices:
+        sections.append("사용량 보정 안내\n" + "\n".join(portion_notices))
     if draft.notes.strip():
         sections.append("안내\n" + draft.notes.strip())
     try:

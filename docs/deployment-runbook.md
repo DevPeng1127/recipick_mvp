@@ -1,6 +1,17 @@
 # Recipick 운영 배포 기록
 
-현재 상태: **2026-11-02 메뉴 일관성 개선 `b8d8234` 재배포·운영 기본 검증 완료**. 브랜치 `codex/menu-consistency`, 구현 이력 ID `MENU-CONSISTENCY-20261102`, 배포 문서 이력 ID `MENU-RELEASE-20261102`, 원격 미푸시. 첫 배포는 `c256b5c`/`DEPLOY-20261102`이며 아래 첫 배포 과정은 과거 기록이다. 최신 리비전/검증은 다음 문단과 실제 공개 자원을 따른다.
+현재 상태: **2026-11-02 도움말 UI `4c092cd`와 음료 사용량 보정 `edf35ca` 재배포·운영 기본 검증 완료**. 브랜치 `codex/contextual-help`, 배포 문서 이력 ID `HELP-BEVERAGE-RELEASE-20261102`, 원격 미푸시. 첫 배포는 `c256b5c`/`DEPLOY-20261102`, 직전은 메뉴 일관성 `b8d8234`/`MENU-RELEASE-20261102`이며 아래 각 과정은 당시 기록이다. 최신 리비전/검증은 다음 문단과 실제 공개 자원을 따른다.
+
+## 도움말 UI·음료 사용량 보정 재배포 (2026-11-02)
+
+- 사용자 승인 후 UI 코드·회귀 테스트·문서 14개를 **`4c092cd feat: fold optional explanations into contextual help`**로 커밋했다. 이 커밋은 음료 보정 **`edf35ca`**를 포함한다. 새 기능/마이그레이션·요금/한도 변경 없이 기존 Cloud Run/Firebase에 반영했다.
+- 운영 JWT 준비: 개발 키와 별개인 로컬 보관 운영 키가 실제 Secret Manager 활성 버전 1과 일치함을 값 출력 없이 확인했다. 기존 서비스가 동일 참조를 사용한다. 카카오 버전 2, DB/Gemini/Google 버전 1과 실행·확장 설정을 유지했다.
+- 산출물 검증: 운영 API 주소로 TypeScript/Vite 빌드 통과. Linux 컨테이너의 전체 앱 Python 소스/requirements 해시 일치·UID 10001·개발 `.env`/테스트 제외 확인. 네트워크 없이 저장된 메뉴를 재생해 정상/불일치 거절과 주스 1인분 **0.25L**, 2인분 **0.5L**를 확인했다. 프런트의 도움말/운영 주소 포함·알려진 비밀 값 제외 통과. 기존 전체 백엔드 684개·프런트 184개·린트 검증 후 코드 추가 변경이 없어 이를 반복하지 않았다.
+- 배포: 검증 이미지를 기존 Registry에 푸시한 뒤 Cloud Run 이미지 참조만 갱신하고 Hosting 정적 파일 3개를 공개했다. Ready·100% 트래픽과 Linux manifest digest 일치 확인. 이미지 인덱스 digest는 `sha256:4c0c5955e5c95f304112f73f24bec54b6f201af71ebeeff66f35295f2d077814`이며 아래 실행 manifest digest와 구분한다.
+- 실제 운영 검증: 공개 HTML/JS/CSS 바이트 일치, `/recipes`·`/login`·두 OAuth 콜백 SPA 새로고침/캐시 정책 통과. API health·인증 없는 접근 거절·CORS 허용/불허·로그인 URL의 운영 콜백 정상. 존재하지 않는 사용자의 서명 토큰으로 Neon 연결/거절을 읽기 전용 확인했다. 브라우저 1280×720에서 기존 로그인 세션과 목록, `?` Enter/Space 조작·새로고침 기본 접힘을 확인했다. 빈 화면·오류 오버레이·반환된 콘솔 오류/경고 없음. 임시 탭만 닫았다.
+- 적용/한계: 도움말은 새로고침 후 적용된다. 음료 보정은 **새 추천부터** 적용하며 과거 저장 메뉴/재차감 계획은 자동 수정하지 않는다. 외부 AI 호출 0회, 재고·사용자 설정 변경 없음. 운영 실제 AI 생성/차감·소셜 재로그인·모바일 실기기는 재검증하지 않았으며 기존 로컬 테스트를 따른다.
+- 복구 기준: 직전 Cloud Run **`recipick-api-menu-b8d8234`**, Hosting **`ec9a514cb5197f41`**/릴리스 **`1793600377238000`**. 필요 시 이전 Cloud Run으로 트래픽을 전환하고 해당 Hosting 버전을 다시 릴리스한다. 현재 정상 검증되어 복구를 실행하지 않았다. 개발/운영 키와 DB 스키마 변경이 없어 별도 데이터 롤백은 없다.
+- 증빙: 저장소 밖 `C:/Users/pengveloper/.codex/visualizations/2026/10/23/01a16717-7b50-7211-8e19-054d43dd6b76/recipick-help-production.jpg`. 무시된 `.deploy/`에는 `help-release-before.json`, `help-release-previous-hosting.json`, `help-image-metadata.json`, `help-release-verification.json`을 보관한다. 배포 이력 ID **`HELP-BEVERAGE-RELEASE-20261102`**.
 
 ## 메뉴 일관성 개선 재배포 (2026-11-02)
 
@@ -18,9 +29,9 @@
 - 웹: **https://recipick-prod-1127.web.app**
 - API: **https://recipick-api-inadpqyfnq-as.a.run.app**, API 경로 `/api/v1`, 상태 확인 `/health`.
 - Google 프로젝트: `recipick-prod-1127` (`Recipick Production`), 번호 `306978637426`.
-- Cloud Run: Singapore, 서비스 `recipick-api`, 현재 리비전 **`recipick-api-menu-b8d8234`**(트래픽 100%). 직전 리비전 `recipick-api-00002-9nv`, 최초 리비전 `recipick-api-00001-ntg`.
-- 컨테이너: `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:menu-b8d8234`, 실행 manifest digest **`sha256:f052e93811a9923b3cb67a7c740cddc0aca0f3c1db48f469732c7016cf308e9a`**. 이미지 인덱스 digest와 구분한다.
-- Hosting 버전: **`sites/recipick-prod-1127/versions/ec9a514cb5197f41`**, 릴리스 **`1793600377238000`**. 공개 JS `index-De4DHigu.js`, CSS `index-Dm6spGVA.css`.
+- Cloud Run: Singapore, 서비스 `recipick-api`, 현재 리비전 **`recipick-api-help-4c092cd`**(트래픽 100%). 직전 리비전 `recipick-api-menu-b8d8234`, 최초 리비전 `recipick-api-00001-ntg`.
+- 컨테이너: `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:help-4c092cd`, 실행 manifest digest **`sha256:27404ec42e5f47f46989336b698dc917ad39d8d5edda62d52e0cb748a9125b10`**. 이미지 인덱스 digest와 구분한다.
+- Hosting 버전: **`sites/recipick-prod-1127/versions/33b7700e4d1ebba7`**, 릴리스 **`1793604374537000`**. 공개 JS `index-Dsx8jSIS.js`, CSS `index-BA0K98cz.css`.
 - 월 예산: **5,000 KRW**, 해당 Google 프로젝트만, 50%·90%·100% 실제 지출 알림. 기본 결제 관리자/사용자 알림 수신 유지. **자동 차단/청구 상한이 아니다.**
 - 기존 AI/OAuth용 Google 프로젝트 `resolute-vault-478108-h0`는 결제 비활성 상태를 읽기 전용으로 확인했다. 호스팅용 새 프로젝트의 결제 연결과 분리되어 있다. AI Studio 모델 한도 자체의 실시간 확인과는 다르다.
 

@@ -1,6 +1,24 @@
 # Recipick 운영 배포 기록
 
-현재 상태: **2026-11-02 도움말 UI `4c092cd`와 음료 사용량 보정 `edf35ca` 재배포·운영 기본 검증 완료**. 브랜치 `codex/contextual-help`, 배포 문서 이력 ID `HELP-BEVERAGE-RELEASE-20261102`, 원격 미푸시. 첫 배포는 `c256b5c`/`DEPLOY-20261102`, 직전은 메뉴 일관성 `b8d8234`/`MENU-RELEASE-20261102`이며 아래 각 과정은 당시 기록이다. 최신 리비전/검증은 다음 문단과 실제 공개 자원을 따른다.
+현재 상태: **2026-11-03 첫 설정 냉장고 중복 방지 `de2e409` 배포·운영 기본 검증 완료**. 브랜치 `codex/onboarding-deduplication`, 배포 문서 이력 ID `ONBOARDING-RELEASE-20261103`, 원격 미푸시. 첫 배포는 `c256b5c`/`DEPLOY-20261102`, 직전은 도움말·음료 보정 `4c092cd`/`HELP-BEVERAGE-RELEASE-20261102`이며 아래 각 과정은 당시 기록이다. 최신 리비전/검증은 다음 문단과 실제 공개 자원을 따른다.
+
+## 첫 설정 냉장고 중복 방지 배포 (2026-11-03)
+
+- 사용자 승인 후 코드·회귀 테스트·문서 12개를 **`de2e409 fix: prevent duplicate refrigerators during onboarding`**로 커밋했다. 새 `POST /api/v1/refrigerators/initial`를 포함한 **백엔드 먼저**, 새 API를 호출하는 프런트를 이어 배포했다. DB 마이그레이션·키 교체·요금제/자원 한도 변경은 없다.
+- 운영 JWT 준비: 배포 전 별도 운영 키 필요 원칙을 안내하고, 개발 키와 다른 기존 운영 키가 실제 Secret Manager 활성 버전 1과 일치함을 값 출력 없이 확인했다. 기존 secret 참조·1CPU/1GiB·동시성 2·120초·요청 기반 CPU·확장/ingress 설정을 보존했다.
+- 산출물 검증: 운영 API 주소로 TypeScript/Vite 빌드 통과. 이미지의 전체 앱 Python 소스/requirements 해시 일치·UID 10001·개발 `.env`/테스트 제외, 프런트의 새 API/진행 문구·운영 주소 포함 및 알려진 비밀 값 제외 확인. 외부 통신 없이 기존 메뉴 표본/불일치 거절·주스 0.25L/0.5L 재생도 통과했다. 앞선 전체 백엔드 693개·프런트 192개·린트 검증 이후 앱 코드 변경이 없어 전체 테스트는 중복 실행하지 않았다.
+- 운영 검증: Cloud Run Ready·트래픽 100%·실행 manifest digest 일치. 공개 HTML/JS/CSS 바이트 일치, `/onboarding`·`/dashboard`·`/recipes`·`/login`·두 OAuth 콜백 SPA 경로와 캐시 정책 정상. health·새 초기 준비 API 미인증 401·CORS 허용/불허·두 OAuth 콜백 URL·기존 서명/Neon 연결 정상. 브라우저 1280×720에서 기존 로그인·대시보드의 현재 냉장고 목록·새로고침 정상, 반환된 콘솔 오류/경고 0건. 임시 검증 탭만 닫았다.
+- 적용/한계: 화면을 새로고침하면 버튼 잠금과 새 초기 준비 API가 적용된다. 운영에서 첫 설정을 재제출하지 않았고 사용자 데이터/설정 변경·기존 냉장고 삭제·AI 호출은 하지 않았다. 연속 클릭/동시 요청/실패 후 재시도는 격리 환경의 자동·브라우저 테스트 결과를 따른다. 소셜 재로그인·모바일 실기기는 다시 검증하지 않았다.
+- 복구 기준: 직전 Cloud Run **`recipick-api-help-4c092cd`**, Hosting **`33b7700e4d1ebba7`**/릴리스 **`1793604374537000`**. 이전 버전으로 복구해야 한다면 **Hosting을 먼저 이전 버전으로 전환한 뒤 Cloud Run**을 전환해야 새 프런트가 없는 API를 호출하지 않는다. 기존 중복 방지 기능은 복구 시 사라진다. 현재 정상 검증되어 복구를 실행하지 않았고 별도 데이터 롤백은 없다.
+- 증빙: 저장소 밖 `C:/Users/pengveloper/.codex/visualizations/2026/10/23/01a16717-7b50-7211-8e19-054d43dd6b76/recipick-onboarding-production.jpg`. 무시된 `.deploy/`에 `onboard-release-before.json`, `onboard-release-previous-hosting.json`, `onboard-image-metadata.json`, `onboard-release-verification.json` 보관. 이미지 인덱스 digest **`sha256:b775582f151901f02128e8e044e618e1338778b502180617808f28480e2c7738`**는 아래 Linux 실행 manifest와 구분한다.
+
+### 로컬 Docker 시작 오류 복구
+
+배포 준비 중 Docker Desktop이 꺼져 있어 첫 빌드가 실패했고, 시작 시 두 임시 Unix 소켓에 `The file cannot be accessed by the system` 오류가 발생했다. 개별 소켓 이름 변경도 실패했다. Docker를 정상 종료하고 해당 폴더에 0바이트 소켓만 있음을 확인한 뒤 같은 부모 경로의 백업 이름으로 보존 이동했다. 두 경로를 모두 비운 상태로 재시작한 후 빌드·이미지 검증·업로드를 통과했다. Docker 초기화·업데이트나 이미지/볼륨/설정 삭제는 하지 않았다.
+
+- `%LOCALAPPDATA%/Docker/run` → `run.onboard-de2e409.backup` (기존 소켓 2개). 중간 실패로 재생성된 소켓 1개도 `run.onboard-de2e409.retry.backup`에 보존했다.
+- `%LOCALAPPDATA%/docker-secrets-engine` → `docker-secrets-engine.onboard-de2e409.backup` (0바이트 `engine.sock`만 존재, 저장된 비밀 데이터 없음).
+- 백업 폴더는 현재 로컬에 남아 있다. 오류 로그가 가리킨 실행 임시 폴더에 한정한 복구이며, 향후 오류에 대해 Docker 데이터 폴더 전체를 이동/삭제하라는 지침이 아니다. 정상 시작 후 Docker를 사용해 이번 배포를 완료했다.
 
 ## 도움말 UI·음료 사용량 보정 재배포 (2026-11-02)
 
@@ -29,9 +47,9 @@
 - 웹: **https://recipick-prod-1127.web.app**
 - API: **https://recipick-api-inadpqyfnq-as.a.run.app**, API 경로 `/api/v1`, 상태 확인 `/health`.
 - Google 프로젝트: `recipick-prod-1127` (`Recipick Production`), 번호 `306978637426`.
-- Cloud Run: Singapore, 서비스 `recipick-api`, 현재 리비전 **`recipick-api-help-4c092cd`**(트래픽 100%). 직전 리비전 `recipick-api-menu-b8d8234`, 최초 리비전 `recipick-api-00001-ntg`.
-- 컨테이너: `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:help-4c092cd`, 실행 manifest digest **`sha256:27404ec42e5f47f46989336b698dc917ad39d8d5edda62d52e0cb748a9125b10`**. 이미지 인덱스 digest와 구분한다.
-- Hosting 버전: **`sites/recipick-prod-1127/versions/33b7700e4d1ebba7`**, 릴리스 **`1793604374537000`**. 공개 JS `index-Dsx8jSIS.js`, CSS `index-BA0K98cz.css`.
+- Cloud Run: Singapore, 서비스 `recipick-api`, 현재 리비전 **`recipick-api-onboard-de2e409`**(트래픽 100%). 직전 리비전 `recipick-api-help-4c092cd`, 최초 리비전 `recipick-api-00001-ntg`.
+- 컨테이너: `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:onboard-de2e409`, 실행 manifest digest **`sha256:467ef6d7550f7631c48deb4368f57faff0419bccaff1fbdbaa0f5dd1f77e067d`**. 이미지 인덱스 digest와 구분한다.
+- Hosting 버전: **`sites/recipick-prod-1127/versions/e0726020915cb379`**, 릴리스 **`1793678139105000`**. 공개 JS `index-CCRzaGyW.js`, CSS `index-BA0K98cz.css`.
 - 월 예산: **5,000 KRW**, 해당 Google 프로젝트만, 50%·90%·100% 실제 지출 알림. 기본 결제 관리자/사용자 알림 수신 유지. **자동 차단/청구 상한이 아니다.**
 - 기존 AI/OAuth용 Google 프로젝트 `resolute-vault-478108-h0`는 결제 비활성 상태를 읽기 전용으로 확인했다. 호스팅용 새 프로젝트의 결제 연결과 분리되어 있다. AI Studio 모델 한도 자체의 실시간 확인과는 다르다.
 

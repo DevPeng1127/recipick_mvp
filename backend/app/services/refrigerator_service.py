@@ -4,6 +4,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.refrigerator import MemberRole, Refrigerator, RefrigeratorMember
 from app.models.storage import StorageBox
+from app.models.user import User
 from app.schemas.refrigerator import RefrigeratorCreate, RefrigeratorUpdate
 
 
@@ -43,6 +44,22 @@ async def create_refrigerator(
     await db.flush()
 
     return refrigerator
+
+
+async def ensure_initial_refrigerator(user_id: int, db: AsyncSession) -> Refrigerator:
+    # Serialize first-setup retries for this account, including different tabs.
+    # The request transaction holds this lock until the membership is committed.
+    await db.execute(select(User.id).where(User.id == user_id).with_for_update())
+    existing = await db.scalar(
+        select(Refrigerator)
+        .join(RefrigeratorMember)
+        .where(RefrigeratorMember.user_id == user_id, RefrigeratorMember.role == MemberRole.OWNER)
+        .order_by(Refrigerator.id)
+        .limit(1)
+    )
+    if existing is not None:
+        return existing
+    return await create_refrigerator(user_id, RefrigeratorCreate(name="우리집 냉장고"), db)
 
 
 async def get_refrigerator_detail(

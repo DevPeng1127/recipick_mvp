@@ -70,8 +70,9 @@ export default function PreferencePage() {
   }
 
   const handleSave = async () => {
-    await savePreference(form)
-    useToastStore.getState().addToast('success', '설정이 저장되었습니다.')
+    if (await savePreference(form)) {
+      useToastStore.getState().addToast('success', '설정이 저장되었습니다.')
+    }
   }
 
   if (isLoading) return <LoadingSpinner />

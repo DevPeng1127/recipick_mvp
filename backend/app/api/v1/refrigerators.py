@@ -17,6 +17,7 @@ from app.schemas.refrigerator import (
 from app.services.refrigerator_service import (
     create_refrigerator,
     delete_refrigerator,
+    ensure_initial_refrigerator,
     get_refrigerator_detail,
     list_refrigerators,
     reorder_refrigerators,
@@ -63,6 +64,14 @@ async def create_new_refrigerator(
     db: AsyncSession = Depends(get_db),
 ):
     return await create_refrigerator(current_user.id, data, db)
+
+
+@router.post("/initial", response_model=RefrigeratorResponse)
+async def prepare_initial_refrigerator(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await ensure_initial_refrigerator(current_user.id, db)
 
 
 @router.put("/reorder", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,5 +1,5 @@
 import { afterLoginPath, pendingInvitation } from '../utils/invitation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { CookingSkill, UserPreferenceUpdate } from '../api/users'
 import SkillLevelSelector from '../components/preference/SkillLevelSelector'
@@ -7,7 +7,7 @@ import AllergyTagInput from '../components/preference/AllergyTagInput'
 import CookingToolSelector from '../components/preference/CookingToolSelector'
 import { useAuthStore } from '../stores/useAuthStore'
 import { usePreferenceStore } from '../stores/usePreferenceStore'
-import { useRefrigeratorStore } from '../stores/useRefrigeratorStore'
+import { ensureInitialRefrigerator } from '../api/refrigerators'
 
 const NICKNAME_REGEX = /^[가-힣a-zA-Z0-9\-_()]+$/
 
@@ -15,7 +15,9 @@ export default function OnboardingPage() {
   const navigate = useNavigate()
   const { user, updateNickname } = useAuthStore()
   const { savePreference } = usePreferenceStore()
-  const { addRefrigerator } = useRefrigeratorStore()
+  const inFlight = useRef(false)
+  const [isFinishing, setIsFinishing] = useState(false)
+  const [finishError, setFinishError] = useState('')
 
   const [step, setStep] = useState(0)
   const [nickname, setNickname] = useState(user?.nickname ?? '')
@@ -46,10 +48,20 @@ export default function OnboardingPage() {
   }
 
   const handleFinish = async () => {
-    await updateNickname(nickname.trim())
-    await savePreference(pref)
-    if (!pendingInvitation()) await addRefrigerator('우리집 냉장고')
-    navigate(afterLoginPath(), { replace: true })
+    if (inFlight.current) return
+    inFlight.current = true
+    setIsFinishing(true)
+    setFinishError('')
+    try {
+      await updateNickname(nickname.trim())
+      if (!await savePreference(pref)) throw new Error('Preference save failed')
+      if (!pendingInvitation()) await ensureInitialRefrigerator()
+      navigate(afterLoginPath(), { replace: true })
+    } catch {
+      setFinishError('첫 설정을 완료하지 못했습니다. 입력 내용은 유지되니 다시 시도해 주세요.')
+      inFlight.current = false
+      setIsFinishing(false)
+    }
   }
 
   const canAdvance = (): boolean => {
@@ -156,35 +168,38 @@ export default function OnboardingPage() {
           <h2 className="text-xl font-bold text-gray-800">{steps[step].title}</h2>
         </div>
 
-        <div className="mb-8">{steps[step].content}</div>
+        {finishError && <p role="alert" className="mb-4 text-sm text-red-600">{finishError}</p>}
+        <fieldset disabled={isFinishing} aria-busy={isFinishing} className="min-w-0">
+          <div className="mb-8">{steps[step].content}</div>
 
-        <div className="flex gap-3">
-          {step > 0 && (
-            <button
-              onClick={() => setStep(step - 1)}
-              className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-50"
-            >
-              이전
-            </button>
-          )}
-          {step < steps.length - 1 ? (
-            <button
-              onClick={() => {
-                if (canAdvance()) setStep(step + 1)
-              }}
-              className="flex-1 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
-            >
-              다음
-            </button>
-          ) : (
-            <button
-              onClick={handleFinish}
-              className="flex-1 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
-            >
-              시작하기
-            </button>
-          )}
-        </div>
+          <div className="flex gap-3">
+            {step > 0 && (
+              <button
+                onClick={() => setStep(step - 1)}
+                className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-600 hover:bg-gray-50"
+              >
+                이전
+              </button>
+            )}
+            {step < steps.length - 1 ? (
+              <button
+                onClick={() => {
+                  if (canAdvance()) setStep(step + 1)
+                }}
+                className="flex-1 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+              >
+                다음
+              </button>
+            ) : (
+              <button
+                onClick={handleFinish}
+                className="flex-1 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+              >
+                {isFinishing ? '시작하는 중…' : '시작하기'}
+              </button>
+            )}
+          </div>
+        </fieldset>
       </div>
     </div>
   )

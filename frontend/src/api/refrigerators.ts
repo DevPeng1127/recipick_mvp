@@ -23,6 +23,10 @@ export const getRefrigerator = async (id: number): Promise<RefrigeratorDetail> =
   return data
 }
 
+export const ensureInitialRefrigerator = async (): Promise<void> => {
+  await client.post('/refrigerators/initial')
+}
+
 export const updateRefrigerator = async (
   id: number,
   body: RefrigeratorUpdate

@@ -11,7 +11,7 @@ interface PreferenceState {
   isLoading: boolean
   error: string | null
   fetchPreference: () => Promise<void>
-  savePreference: (data: UserPreferenceUpdate) => Promise<void>
+  savePreference: (data: UserPreferenceUpdate) => Promise<boolean>
 }
 
 export const usePreferenceStore = create<PreferenceState>((set) => ({
@@ -34,8 +34,10 @@ export const usePreferenceStore = create<PreferenceState>((set) => ({
     try {
       const updated = await updateMyPreference(data)
       set({ preference: updated, isLoading: false })
+      return true
     } catch {
       set({ error: '선호 설정 저장에 실패했습니다.', isLoading: false })
+      return false
     }
   },
 }))

@@ -1,5 +1,82 @@
 # 소규모 배포 비용과 API 사용량 검토
 
+## 현재 운영 사양·한도·과금 확인 (2026-11-04)
+
+사용자 요청으로 실제 운영 설정과 최신 공식 요금을 다시 확인했다. 이 절이 아래의 초기 조사/선택 전 기록보다 우선한다. 배포 코드는 `de2e409`, 운영 기록은 `bc2a1f5`다. 실제 결제액/청구서나 공급자별 모든 무료 잔여량을 조회한 견적은 아니다. USD 단가이며 원화 청구 SKU·환율·세금은 별도다. 조사 이력 ID **`INFRA-LIMITS-20261104`**.
+
+### 구성과 확인한 설정
+
+```mermaid
+flowchart LR
+    U[사용자 브라우저] -->|화면 파일 다운로드| H[Firebase Hosting · Blaze]
+    U -->|API 요청| A[Cloud Run · FastAPI · Singapore]
+    A -->|재고·회원·소비 이력| D[Neon Free · PostgreSQL 16 · AWS Singapore]
+    A -->|메뉴·영수증·음성 인식| G[Gemini 3.5 Flash-Lite · 별도 Free 프로젝트]
+    A --> O[카카오·Google 로그인]
+    S[Secret Manager] -->|운영 키 주입| A
+    R[Artifact Registry] -->|배포 이미지| A
+    A --> L[Cloud Logging]
+```
+
+| 구분 | 실제 운영 설정 |
+| --- | --- |
+| 웹 | `https://recipick-prod-1127.web.app`, React 정적 파일, 기본 HTTPS 도메인 |
+| API | `https://recipick-api-inadpqyfnq-as.a.run.app`, Cloud Run 리비전 `recipick-api-onboard-de2e409`, 트래픽 100% |
+| API 자원 | Singapore `asia-southeast1`, **1 vCPU / 1 GiB**, 요청 기반 과금, 최소 0·서비스 최대 1 인스턴스, 인스턴스당 동시 요청 2, 요청 제한 120초 |
+| DB | Neon 프로젝트 `autumn-morning-81047996`, **Free (`free_v3`)**, PostgreSQL 16, AWS Singapore, **0.25 CU 고정**, 5분 유휴 절전. 조회 당시 `idle` |
+| AI | `gemini-3.5-flash-lite`. 별도 프로젝트 `resolute-vault-478108-h0`의 **결제 비활성** 재확인. 호스팅 프로젝트 `recipick-prod-1127`은 결제 활성 |
+| 비밀 보관 | Secret Manager의 운영 키 5종 사용. ENABLED 5버전 + 이전 카카오 DISABLED 1버전 = 과금 기준 버전 6개. 값은 조회/기록하지 않음 |
+| 비용 알림 | 프로젝트 월 **5,000원**, 실제 지출 **50%·90%·100%** 알림 재확인. 자동 차단/월 청구 상한 아님 |
+
+사진·녹음 원본은 처리 후 영구 저장하지 않는다. 사용자 데이터는 PostgreSQL에 저장하며 Firestore·Firebase Authentication·Neon Auth·유료 Cloud SQL·별도 파일 저장소는 현재 앱에서 사용하지 않는다. API는 Hosting 프록시를 거치지 않고 브라우저가 Cloud Run으로 직접 요청한다. 배포 빌드는 로컬 PC에서 수행한다.
+
+### 무료량을 넘으면 자동 과금되는 부분
+
+| 서비스 | 측정 단위와 무료량 | 초과 시 |
+| --- | --- | --- |
+| Firebase Hosting | 정적 파일 저장 **10 GB**, 가격표상 전송 **360 MB/일** | 저장 **$0.026/GB·월**, 전송 **$0.15/GB**. 현재 Blaze이므로 초과 사용량 자동 과금 |
+| Cloud Run CPU | vCPU × 처리 시간. 미국 단가 기준 월 **180,000 vCPU초** 상당 할인 | 현재 Singapore Tier 2 **$0.0000336/vCPU초**에서 무료 할인 차감 후 청구 |
+| Cloud Run RAM | 할당 GiB × 처리 시간. 미국 단가 기준 월 **360,000 GiB초** 상당 할인 | 현재 Singapore Tier 2 **$0.0000035/GiB초**에서 무료 할인 차감 후 청구 |
+| Cloud Run 요청 | 월 **200만 요청** | **$0.40/100만 요청**. AI 호출 외 일반 API 요청도 포함 |
+| Cloud Run 외부 전송 | 서버가 인터넷으로 내보낸 데이터 용량 | 지역·목적지별 네트워크 요금. 북미 내 1 GiB 무료 조건을 Singapore에 그대로 적용하지 않음 |
+| Artifact Registry | 컨테이너 보관 **0.5 GiB·월** 포함 | 약 **$0.10/GiB·월**. 이전 배포 이미지도 보관량에 영향 |
+| Secret Manager | 월 과금 기준 **6버전·읽기 10,000회** 포함 | 약 **$0.06/버전·월**, **$0.03/읽기 10,000회**. DISABLED 버전도 저장 과금 기준에 포함 |
+| Cloud Logging | 로그 수집 **50 GiB/프로젝트·월** 포함 | **$0.50/GiB**, 기본 30일 보관 포함. 보관 기간 연장은 별도 |
+
+공식 근거: [Hosting 가격표](https://firebase.google.com/pricing), [Cloud Run](https://cloud.google.com/run/pricing), [네트워크](https://cloud.google.com/vpc/network-pricing), [Artifact Registry](https://cloud.google.com/artifact-registry/pricing), [Secret Manager](https://cloud.google.com/secret-manager/pricing), [Logging](https://cloud.google.com/products/observability/pricing).
+
+**Hosting 문서의 표기 차이:** 현재 가격표는 360 MB/일과 Blaze 무료량의 일별 계산을 명시하지만 [Hosting 상세 문서](https://firebase.google.com/docs/hosting/usage-quotas-pricing)는 월 10 GB로 설명한다. 월 총량만 믿고 하루에 몰아 쓰지 않도록 **일 360 MB 기준을 우선**해 안내한다. 일별/월별 표기가 완전히 같은 한도라고 단정하지 않는다.
+
+**Cloud Run 무료 시간 환산:** 무료량은 같은 결제 계정의 프로젝트들이 공유하며 Tier 1 단가의 금액 할인으로 적용된다. 현재 Tier 2에서 다른 사용이 없다면 CPU 무료 할인 $4.32 ÷ $0.0000336 ≈ **128,571초 = 35.7시간**, RAM 무료 할인 $0.90 ÷ $0.0000035 ≈ **257,143 GiB초 = 1 GiB에서 71.4시간**이다. 둘은 별도 항목이다. 서버는 요청 처리뿐 아니라 시작/종료 중에도 과금 시간이 생기고, AI 응답을 기다리는 시간도 요청 처리 시간이다. 동시 요청은 같은 인스턴스 자원을 공유하므로 두 요청 시간을 단순 합산하면 실제보다 크게 추정할 수 있다.
+
+지역 단가는 11월 4일 Google Cloud Billing Catalog API에서 직접 조회했다: CPU SKU `085C-A237-027A`, RAM `600C-3782-6708`, 요청 `2DA5-55D3-E679`. [Catalog API](https://cloud.google.com/billing/v1/how-tos/catalog-api), [무료 할인 기준](https://cloud.google.com/run/pricing). 조회 결과는 Git에서 제외한 `.deploy/cloudrun-price-review-20261104.json`에 보관한다. 최소 0·최대 1 설정도 금액을 5,000원으로 제한하지 않는다.
+
+### 무료 한도를 넘으면 사용이 제한되는 부분
+
+| 서비스 | 현재 한도 | 초과 결과 |
+| --- | --- | --- |
+| Neon Free DB | 프로젝트당 **1 GB**, 월 **100 CU-hours**, 외부 전송 월 **5 GB** | 계산량/전송량 소진 시 다음 기간 또는 업그레이드까지 compute 중단. 저장량 초과 시 용량 증가 작업 실패. 자동 유료 전환 없음 |
+| Gemini Free | 모델별 RPM·입력 TPM·RPD. 마지막 사용자 제공 자료는 **15회/분·250,000 입력 토큰/분·500회/일** | 한 항목이라도 넘으면 429 등 사용 제한. 현재 결제 비활성 프로젝트에서는 초과 토큰을 자동 유료 처리하지 않음 |
+| 앱 자체 AI 제한 | 계정당 **3회/분·20회/일**, 앱 전체 **12회/분·400회/일**, 계정당 진행 중 1건 | 제공자 호출 전에 거절/대기 안내. 별도 비용 부과 기능 없음 |
+
+Neon의 **1 CU는 약 1 vCPU·4 GB RAM**이며 현재 0.25 CU는 약 0.25 vCPU·1 GB RAM이다. **100 CU-hours ÷ 0.25 CU = 월 400시간** 가동 가능량이다. 이 시간에는 쿼리 자체 시간뿐 아니라 절전 전 유휴 시간도 들어간다. 한 달 내내 켜 놓으면 30일 기준 180 CU-hours이므로 무료량을 초과한다. 일반 DB는 행 조회/쓰기 횟수마다 별도로 과금하는 구조가 아니다. [Neon 요금](https://neon.com/pricing), [Free 한도와 초과 동작](https://neon.com/docs/introduction/plans).
+
+Gemini의 15/250,000/500은 **이번에 AI Studio에서 실시간 재조회한 수치가 아니다**. 오늘 확인한 것은 배포 모델과 해당 Google 프로젝트의 결제 비활성 상태다. 실제 계정 할당량은 AI Studio의 Rate limits가 최종 기준이다. RPM은 분당 요청, TPM은 분당 입력 토큰, RPD는 하루 요청이다. 토큰은 글자 수와 같지 않으며 사진/음성도 모델 입력 토큰으로 계산된다. 한도는 API 키가 아니라 Google 프로젝트 단위이므로 로컬·운영·같은 프로젝트의 다른 키가 합산된다. 앱의 로컬 DB·운영 DB 횟수 제한은 서로 독립적이다. [Gemini 한도](https://aistudio.google.com/docs/rate-limits).
+
+앱은 메뉴 추천·영수증 사진 인식·음성 인식에 각각 **요청당 Gemini 1회**를 호출하고 같은 횟수 한도를 공유한다. 자동 재호출은 하지 않으며 실제 호출을 시도한 뒤 실패한 경우도 앱 횟수에 포함한다. 재고 조회/수동 등록/스마트 차감 확정/소비·폐기 조회/기준표 보관 기한 추천은 Gemini를 호출하지 않는다. 계정 일일 한도는 한국 자정, 앱 전체 일일 한도는 미국 태평양 자정 기준이다.
+
+응답당 **최대 2,048 출력 토큰**을 설정했지만 월 토큰 예산이나 입력 TPM 차단은 앱에서 별도로 구현하지 않았다. `usageMetadata`의 실제 입력/출력 토큰을 저장하지 않으므로 현재 앱 기록만으로 기능별 정확한 토큰 비용을 계산할 수 없다. 이미지 최대 **5 MiB·2,000만 화소**, 음성 최대 **60초·2 MiB**는 업로드/처리 제한이며 넘으면 거절한다. 이 제한 자체가 유료 결제를 일으키지는 않는다.
+
+추후 Gemini를 유료로 바꾸는 경우 현재 모델 Standard 단가는 **입력 $0.30/100만 토큰**, **출력 $2.50/100만 토큰**(생각 토큰 포함)이다. 가령 요청당 입력 2,000·출력 1,000이면 **$0.0031/회**, 월 1,500회면 **$4.65**다. 이는 가정 예시이며 현재 Free 프로젝트에 청구되는 금액이 아니다. [공식 모델 요금](https://aistudio.google.com/docs/pricing#gemini-3.5-flash-lite).
+
+### 가족·지인 1~10명에서의 판단
+
+10명 × 하루 AI 5회 × 30일 = **월 1,500회**. 서버 처리 시간이 건당 30초이고 요청들이 겹치지 않는다는 가정이면 45,000초(12.5시간)다. AI 처리분의 CPU/RAM은 현재 무료 할인 범위 안이다. 일반 API·시작/종료·다른 프로젝트 사용·네트워크·이미지/로그 보관은 별도이므로 **월 0원에 가까운 운영을 목표로 할 수 있지만 총액 0원이나 5,000원 이하를 보장하지 않는다**. 장시간 가동되는 DB의 400시간 한도, AI의 1인 하루 20회, 짧은 시간에 몰리는 앱 전체 분당 12회를 먼저 관찰하는 것이 유용하다.
+
+비용/사용량은 Google Cloud Billing의 프로젝트별 Reports, Cloud Run 지표, Firebase Hosting Usage, Neon Usage, AI Studio Usage/Rate limits에서 확인한다. 현재 5,000원 알림은 Recipick 호스팅 프로젝트만 대상으로 하며 별도 Gemini/Neon 사용료까지 합산하는 예산은 아니다. 이번 작업은 조회와 문서 갱신·원격 푸시이며 서비스 사양·키·한도·결제·배포는 변경하지 않았다.
+
+---
+
 확인일: **2026-10-30 (한국 시간)**. 대상: 사용자가 확인한 **본인·가족·지인 1~10명**. 코드 기준: `codex/menu-recommendation`, `d3662fd`. 비용은 USD이며 세금·환율·선택적인 도메인 구입비는 별도다. 공급자 공식 문서와 현재 코드를 읽어 작성한 **계획**이며, 클라우드 계정 생성·결제 변경·실제 배포·성능 측정은 하지 않았다. 무료 조건은 가입·배포 시 다시 확인한다.
 
 ## 배포 준비 중 확인한 결정 (2026-11-02)

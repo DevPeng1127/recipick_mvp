@@ -3,7 +3,9 @@
   "history_id": "COOKING-LOCK-FIX-20261107",
   "base_commit": "2777bbfe584632200bf54aa5a121b53175b59008",
   "branch": "codex/cooking-lock-order",
-  "uncommitted": true,
+  "uncommitted_at_verification": true,
+  "implementation_commit": "b2b5c9f03b12ca343b9612efd700e2bda6199c01",
+  "release_evidence": "cooking-lock-release-20261107.json",
   "environment": "Local PostgreSQL 16.13, separate recipick_test database, per-test random schemas",
   "backend_suite": {
     "tests": "732",

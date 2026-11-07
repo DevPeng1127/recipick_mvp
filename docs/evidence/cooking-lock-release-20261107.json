@@ -1,0 +1,60 @@
+{
+  "history_id": "COOKING-LOCK-RELEASE-20261107",
+  "verified_at_utc": "2026-11-07T02:53:51.979031+00:00",
+  "implementation_commit": "b2b5c9f03b12ca343b9612efd700e2bda6199c01",
+  "branch": "codex/cooking-lock-order",
+  "previous_revision": "recipick-api-onboard-de2e409",
+  "revision": "recipick-api-locks-b2b5c9f",
+  "image_digest": "asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api@sha256:7f5b9c4452f8819959690104927132cf654d65931d04fca9588db38e78ea6468",
+  "hosting_release": "sites/recipick-prod-1127/releases/1793678139105000",
+  "hosting_version": "sites/recipick-prod-1127/versions/e0726020915cb379",
+  "live_assets": [
+    {
+      "name": "index-BA0K98cz.css",
+      "sha256": "4d5d6f7c80c9d6552399f121444650c8f6ce813f5c78b5b67dc4353e9b6f5e8a"
+    },
+    {
+      "name": "index-CCRzaGyW.js",
+      "sha256": "f26cc59824e022fb80219022a017baa61fd7f8555cc66c187ad35f8c419530d0"
+    }
+  ],
+  "spa_routes_and_cache_headers": "passed",
+  "traffic_percent": 100,
+  "production_jwt_separate_and_enabled": true,
+  "secret_references_preserved": true,
+  "runtime_spec_preserved_except_image": true,
+  "scaling_ingress_cpu_annotations_preserved": true,
+  "runtime_resources": {
+    "cpu": "1",
+    "memory": "1Gi"
+  },
+  "concurrency": 2,
+  "timeout_seconds": 120,
+  "checks": {
+    "image_app_and_requirements_source_hashes": "passed",
+    "tested_source_hashes": "passed",
+    "container_nonroot_and_development_files_excluded": "passed",
+    "offline_menu_consistency_and_beverage_samples": "passed",
+    "https_health_and_unauthenticated_rejection": "passed",
+    "cors_allow_and_deny": "passed",
+    "oauth_callback_configuration": "passed",
+    "production_signature_and_neon_read": "passed",
+    "existing_hosting_release": "passed",
+    "new_revision_error_log_entries_at_verification": 0
+  },
+  "predeployment_backend_suite": {
+    "tests": "732",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "213.137"
+  },
+  "predeployment_new_lock_regressions": 39,
+  "production_inventory_mutations": 0,
+  "external_ai_calls": 0,
+  "limitations": [
+    "Concurrency, deduction and rollback verified on isolated local PostgreSQL; production checks were read-only.",
+    "No fresh social login, browser interaction or mobile session in this release verification.",
+    "Other dependency-exit commit response boundaries remain a separately recorded follow-up."
+  ]
+}

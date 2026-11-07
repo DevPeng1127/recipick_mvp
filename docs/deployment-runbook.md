@@ -1,8 +1,23 @@
 # Recipick 운영 배포 기록
 
+## 최신 배포 — 스마트 차감 잠금 순서 수정 (2026-11-07)
+
+**`b2b5c9f` 커밋·운영 배포·기본 검증·원격 푸시를 완료했다.** 브랜치 **`codex/cooking-lock-order`**, 배포 이력 ID **`COOKING-LOCK-RELEASE-20261107`**. 이번 배포 기록도 같은 브랜치에 후속 문서 커밋으로 푸시한다. 아래 11-04 이전 문단은 당시 배포 이력이다.
+
+- 사용자가 검증 결과를 확인하고 커밋·운영 반영·기록 갱신·원격 푸시를 승인했다. 분석·수정·39개 신규 회귀를 포함한 **`b2b5c9f fix: order inventory locks and commit before success responses`**를 기존 Cloud Run에 반영했다.
+- 잠금은 냉장고 ID순 → 보관함 ID순 → 재료 ID순으로 획득하고 차감의 보관함은 SHARE를 사용한다. 관련 정렬·삭제·등록 경로와 회원/재고 재검사, 차감·관련 관리 API의 commit 완료 후 성공 응답 처리를 함께 반영했다.
+- 배포 전 별도 운영 JWT 준비 원칙을 안내했다. 보관된 운영 키가 실제 Secret Manager 활성 버전 1과 일치하고 개발 키와 다름을 값 출력 없이 확인했다. 기존 비밀 참조, 1CPU/1GiB·동시성 2·120초·요청 기반 CPU·확장/ingress 설정으로 배포했다.
+- 기존 Dockerfile의 `python:3.12-slim` 태그를 해석해 Linux/amd64 이미지를 빌드했다. 이번 베이스 인덱스는 `sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3635c12fcd0a3d74c21a5b93a54`다. 해시 고정 requirements 설치, 전체 앱 소스/requirements 해시 일치, 비루트 UID 10001 및 개발 `.env`/테스트 제외를 확인했다. 외부 통신 없이 저장된 메뉴 정상/불일치 거절과 음료 0.25L/0.5L 표본을 재생했다.
+- 기존 격리 PostgreSQL 전체 백엔드 **732개 통과**에는 신규 회귀 **39개**가 포함된다. 테스트 증빙의 소스 해시 14개를 이번 작업 트리에 다시 대조했다. 이후 제품 소스 변경 없이 배포 산출물과 운영 연결을 검증했다.
+- Cloud Run **`recipick-api-locks-b2b5c9f`** Ready·트래픽 **100%**, Linux 실행 manifest **`sha256:7f5b9c4452f8819959690104927132cf654d65931d04fca9588db38e78ea6468`** 일치 확인. 업로드된 이미지 인덱스는 `sha256:3934ec551fb0f54de308e0cd8a0938d8c290dfc92a18526dd76f8a004b2ab5ff`다.
+- 운영 HTTPS health·미인증 접근 거절·CORS 허용/거절·Google/Kakao 콜백 설정·운영 서명 검사와 Neon 읽기 통과. 공개 HTML/JS/CSS 바이트와 6개 SPA 경로·캐시 정책도 일치했다. Firebase Hosting은 버전 **`e0726020915cb379`**, 릴리스 **`1793678139105000`**로 서비스 중이며 새 Hosting 릴리스는 생성하지 않았다.
+- 확인 시점 새 리비전의 ERROR 이상 로그는 **0건**이었다. 운영 점검은 읽기 전용이며 동시 차감/롤백의 검증 근거는 격리 DB 회귀 결과다. 운영 실재고 차감·소셜 재로그인·브라우저 조작·모바일 세션은 이번 점검 범위 밖이다. 외부 AI 호출 0회, DB 마이그레이션 0건.
+- 복구가 필요하면 직전 **`recipick-api-onboard-de2e409`**로 트래픽을 전환할 수 있다. 기존 Hosting 및 DB 스키마와 호환되며, 복구하면 이번 잠금 순서·commit 응답 개선이 해제된다. 실제 롤백은 실행하지 않았다.
+- 공유 가능한 증빙은 [배포 검증 JSON](evidence/cooking-lock-release-20261107.json)이다. 무시된 `.deploy/`에 `locks-release-before.json`, `locks-release-previous-hosting.json`, `locks-image-metadata.json`, `locks-linux-manifest.txt`, `locks-release-verification.json`과 해당 릴리스 실행 스크립트를 보관했다. 이 경로에는 보호된 비밀 설정도 있어 Git에 포함하지 않는다.
+
 **2026-11-04 후속 상태:** 아래 첫 설정 수정/배포 기록 `bc2a1f5`까지 `origin/codex/onboarding-deduplication`에 푸시하고 로컬/원격 해시를 대조했다. 운영 코드는 `de2e409`를 유지한다. 실제 자원·결제·예산을 재조회한 [현재 사양·비용·한도](deployment-cost-plan.md)를 추가했고, 이 문서 갱신도 같은 브랜치에 커밋·푸시한다. 이력 ID `INFRA-LIMITS-20261104`. 아래의 ‘원격 미푸시’는 각 배포 당시 기록이다.
 
-현재 상태: **2026-11-03 첫 설정 냉장고 중복 방지 `de2e409` 배포·운영 기본 검증 완료**. 브랜치 `codex/onboarding-deduplication`, 배포 문서 이력 ID `ONBOARDING-RELEASE-20261103`, 원격 미푸시. 첫 배포는 `c256b5c`/`DEPLOY-20261102`, 직전은 도움말·음료 보정 `4c092cd`/`HELP-BEVERAGE-RELEASE-20261102`이며 아래 각 과정은 당시 기록이다. 최신 리비전/검증은 다음 문단과 실제 공개 자원을 따른다.
+**2026-11-03 당시 첫 설정 냉장고 중복 방지 `de2e409` 배포·운영 기본 검증을 완료했다.** 브랜치 `codex/onboarding-deduplication`, 배포 문서 이력 ID `ONBOARDING-RELEASE-20261103`, 당시 원격 미푸시. 첫 배포는 `c256b5c`/`DEPLOY-20261102`, 직전은 도움말·음료 보정 `4c092cd`/`HELP-BEVERAGE-RELEASE-20261102`이며 아래 각 과정은 당시 기록이다.
 
 ## 첫 설정 냉장고 중복 방지 배포 (2026-11-03)
 
@@ -49,8 +64,8 @@
 - 웹: **https://recipick-prod-1127.web.app**
 - API: **https://recipick-api-inadpqyfnq-as.a.run.app**, API 경로 `/api/v1`, 상태 확인 `/health`.
 - Google 프로젝트: `recipick-prod-1127` (`Recipick Production`), 번호 `306978637426`.
-- Cloud Run: Singapore, 서비스 `recipick-api`, 현재 리비전 **`recipick-api-onboard-de2e409`**(트래픽 100%). 직전 리비전 `recipick-api-help-4c092cd`, 최초 리비전 `recipick-api-00001-ntg`.
-- 컨테이너: `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:onboard-de2e409`, 실행 manifest digest **`sha256:467ef6d7550f7631c48deb4368f57faff0419bccaff1fbdbaa0f5dd1f77e067d`**. 이미지 인덱스 digest와 구분한다.
+- Cloud Run은 Singapore의 `recipick-api`이며 현재 리비전은 **`recipick-api-locks-b2b5c9f`**(트래픽 100%)다. 직전 리비전은 `recipick-api-onboard-de2e409`, 최초 리비전은 `recipick-api-00001-ntg`다.
+- 컨테이너는 `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:locks-b2b5c9f`, 실행 manifest digest는 **`sha256:7f5b9c4452f8819959690104927132cf654d65931d04fca9588db38e78ea6468`**다.
 - Hosting 버전: **`sites/recipick-prod-1127/versions/e0726020915cb379`**, 릴리스 **`1793678139105000`**. 공개 JS `index-CCRzaGyW.js`, CSS `index-BA0K98cz.css`.
 - 월 예산: **5,000 KRW**, 해당 Google 프로젝트만, 50%·90%·100% 실제 지출 알림. 기본 결제 관리자/사용자 알림 수신 유지. **자동 차단/청구 상한이 아니다.**
 - 기존 AI/OAuth용 Google 프로젝트 `resolute-vault-478108-h0`는 결제 비활성 상태를 읽기 전용으로 확인했다. 호스팅용 새 프로젝트의 결제 연결과 분리되어 있다. AI Studio 모델 한도 자체의 실시간 확인과는 다르다.

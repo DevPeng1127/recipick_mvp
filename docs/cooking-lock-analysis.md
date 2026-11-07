@@ -42,7 +42,7 @@
 .\.venv\Scripts\python.exe -m pytest tests/integration/test_cooking_locks.py tests/integration/test_cooking.py -q --tb=short -p no:cacheprovider
 ```
 
-구현 검증 단계의 운영 접근·AI 호출은 0회다. 2026-11-07 사용자가 결과를 확인하고 커밋·운영 반영·기록 갱신·원격 푸시를 승인했다. 배포 진행 상태와 실제 결과는 [운영 배포 기록](deployment-runbook.md)에 연결한다. JUnit 결과와 정리 검증 원본은 저장소 밖 `C:/Users/pengveloper/.codex/visualizations/2026/10/23/01a16717-7b50-7211-8e19-054d43dd6b76/cooking-lock-fix-20261107/`에 있다.
+구현 검증 단계의 운영 접근·AI 호출은 0회다. 2026-11-07 사용자 결과 확인 후 **`b2b5c9f`**로 커밋하고 **`origin/codex/cooking-lock-order`**에 푸시했다. 운영 **`recipick-api-locks-b2b5c9f`** Ready·트래픽 100%, 실행 이미지 대조와 읽기 전용 HTTPS/DB 검증을 완료했다. 배포 이력 **`COOKING-LOCK-RELEASE-20261107`**의 상세와 복구 기준은 [운영 배포 기록](deployment-runbook.md), 검증 근거는 [배포 증빙](evidence/cooking-lock-release-20261107.json)에 있다. JUnit 결과와 정리 검증 원본은 저장소 밖 `C:/Users/pengveloper/.codex/visualizations/2026/10/23/01a16717-7b50-7211-8e19-054d43dd6b76/cooking-lock-fix-20261107/`에 있다.
 
 ## 확인된 사실
 

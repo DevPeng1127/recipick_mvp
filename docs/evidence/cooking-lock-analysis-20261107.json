@@ -1,0 +1,3219 @@
+{
+  "date": "2026-11-07",
+  "source_commit": "2777bbfe584632200bf54aa5a121b53175b59008",
+  "environment": {
+    "version": "PostgreSQL 16.13, compiled by Visual C++ build 1944, 64-bit",
+    "database": "recipick_test",
+    "schema": "recipick_test_9503f39bde5e4285b1bb20088bb62330",
+    "isolation": "read committed",
+    "deadlock_timeout": "1s"
+  },
+  "synthetic_data_only": true,
+  "source": "Explicit diagnostic pytest run through actual HTTP endpoints and services",
+  "stock_sql": "SELECT ingredients.id, ingredients.storage_box_id, ingredients.name, ingredients.quantity, ingredients.unit, ingredients.expiry_date, ingredients.expiry_source, storage_boxes.id AS id_1, storage_boxes.refrigerator_id, storage_boxes.name AS name_1, storage_boxes.type, storage_boxes.display_order, refrigerators.id AS id_2, refrigerators.name AS name_2, refrigerators.created_at \nFROM ingredients JOIN storage_boxes ON ingredients.storage_box_id = storage_boxes.id JOIN refrigerators ON storage_boxes.refrigerator_id = refrigerators.id \nWHERE refrigerators.id IN ($1::INTEGER) AND ingredients.id IN ($2::INTEGER, $3::INTEGER) ORDER BY ingredients.id FOR UPDATE OF ingredients, storage_boxes",
+  "test_bind_values": {
+    "A": [
+      10,
+      10,
+      40
+    ],
+    "B": [
+      10,
+      20,
+      30
+    ]
+  },
+  "explain_analyze_summary": {
+    "Node Type": "LockRows",
+    "Actual Rows": 2,
+    "Actual Loops": 1,
+    "Plans": [
+      {
+        "Node Type": "Sort",
+        "Sort Key": [
+          "ingredients.id"
+        ],
+        "Actual Rows": 2,
+        "Actual Loops": 1,
+        "Plans": [
+          {
+            "Node Type": "Nested Loop",
+            "Actual Rows": 2,
+            "Actual Loops": 1,
+            "Plans": [
+              {
+                "Node Type": "Nested Loop",
+                "Join Filter": "(ingredients.storage_box_id = storage_boxes.id)",
+                "Actual Rows": 2,
+                "Actual Loops": 1,
+                "Plans": [
+                  {
+                    "Node Type": "Seq Scan",
+                    "Relation Name": "ingredients",
+                    "Filter": "(ingredients.id = ANY ('{10,40}'::integer[]))",
+                    "Actual Rows": 2,
+                    "Actual Loops": 1
+                  },
+                  {
+                    "Node Type": "Materialize",
+                    "Actual Rows": 2,
+                    "Actual Loops": 2,
+                    "Plans": [
+                      {
+                        "Node Type": "Bitmap Heap Scan",
+                        "Relation Name": "storage_boxes",
+                        "Recheck Cond": "(storage_boxes.refrigerator_id = 10)",
+                        "Actual Rows": 2,
+                        "Actual Loops": 1,
+                        "Plans": [
+                          {
+                            "Node Type": "Bitmap Index Scan",
+                            "Index Name": "ix_storage_boxes_refrigerator_id",
+                            "Index Cond": "(storage_boxes.refrigerator_id = 10)",
+                            "Actual Rows": 2,
+                            "Actual Loops": 1
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "Node Type": "Index Scan",
+                "Relation Name": "refrigerators",
+                "Index Name": "refrigerators_pkey",
+                "Index Cond": "(refrigerators.id = 10)",
+                "Actual Rows": 1,
+                "Actual Loops": 2
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "case": "crossed-A-1",
+      "pids": {
+        "gate_A": 5544,
+        "gate_B": 21872,
+        "A": 3988,
+        "B": 24088
+      },
+      "responses": [
+        [
+          "A",
+          500,
+          {
+            "detail": "Internal server error"
+          }
+        ],
+        [
+          "B",
+          200,
+          {
+            "plan_id": "fc6e4165-85b7-4d16-8f5f-d77efef2be47",
+            "title": "잠금 재현",
+            "items": [
+              {
+                "ingredient_id": 20,
+                "name": "item-20",
+                "quantity": 1.0,
+                "unit": "개",
+                "remaining_quantity": 4.0
+              },
+              {
+                "ingredient_id": 30,
+                "name": "item-30",
+                "quantity": 1.0,
+                "unit": "개",
+                "remaining_quantity": 4.0
+              }
+            ]
+          }
+        ]
+      ],
+      "box_tuple_map": [
+        {
+          "id": 100,
+          "ctid": "(0,1)"
+        },
+        {
+          "id": 101,
+          "ctid": "(0,3)"
+        },
+        {
+          "id": 200,
+          "ctid": "(0,2)"
+        }
+      ],
+      "box_probes": [
+        {
+          "box": 100,
+          "sqlstate": "55P03"
+        },
+        {
+          "box": 101,
+          "sqlstate": "55P03"
+        }
+      ],
+      "before": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 20,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 30,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          },
+          {
+            "user_id": 2,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          }
+        ]
+      },
+      "after": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 20,
+            "quantity": 4.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 30,
+            "quantity": 4.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 20,
+            "quantity": 1.0
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 30,
+            "quantity": 1.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          },
+          {
+            "user_id": 2,
+            "applied_at": "2026-11-07 02:17:03.574115+00:00",
+            "request_hash": "c7c91f8d8d8d5f5b02cf608cd04815d06a9e6b165e6648ee46bd222696dc07b9",
+            "result": {
+              "items": [
+                {
+                  "name": "item-20",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 20,
+                  "remaining_quantity": 4.0
+                },
+                {
+                  "name": "item-30",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 30,
+                  "remaining_quantity": 4.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "fc6e4165-85b7-4d16-8f5f-d77efef2be47"
+            }
+          }
+        ]
+      },
+      "after_retry": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 4.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 20,
+            "quantity": 4.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 30,
+            "quantity": 4.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 4.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 20,
+            "quantity": 1.0
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 30,
+            "quantity": 1.0
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 10,
+            "quantity": 1.0
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 40,
+            "quantity": 1.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": "2026-11-07 02:17:03.650536+00:00",
+            "request_hash": "565d9ef29516080d3d075bcf262e5dc4ddf15c1c3442a3e1488419ff575ddff9",
+            "result": {
+              "items": [
+                {
+                  "name": "item-10",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 10,
+                  "remaining_quantity": 4.0
+                },
+                {
+                  "name": "item-40",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 40,
+                  "remaining_quantity": 4.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "373aed8e-6b5a-493d-a0c7-9fc1b06e6d5f"
+            }
+          },
+          {
+            "user_id": 2,
+            "applied_at": "2026-11-07 02:17:03.574115+00:00",
+            "request_hash": "c7c91f8d8d8d5f5b02cf608cd04815d06a9e6b165e6648ee46bd222696dc07b9",
+            "result": {
+              "items": [
+                {
+                  "name": "item-20",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 20,
+                  "remaining_quantity": 4.0
+                },
+                {
+                  "name": "item-30",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 30,
+                  "remaining_quantity": 4.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "fc6e4165-85b7-4d16-8f5f-d77efef2be47"
+            }
+          }
+        ]
+      },
+      "connections_released_locks": true,
+      "errors": [
+        {
+          "worker": "A",
+          "sqlstate": "40P01",
+          "detail": "<class 'asyncpg.exceptions.DeadlockDetectedError'>: deadlock 발생했음\nDETAIL:  3988 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26145); 24088 프로세스에 의해 블록킹되었음\n24088 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26144); 3988 프로세스에 의해 블록킹되었음\nHINT:  쿼리 상세 정보는 서버 로그를 참조하십시오."
+        }
+      ],
+      "gated": {
+        "activity": [
+          {
+            "pid": 3988,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              5544
+            ]
+          },
+          {
+            "pid": 5544,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 21872,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 24088,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              21872
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 3988,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26144"
+          },
+          {
+            "pid": 3988,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26142"
+          },
+          {
+            "pid": 3988,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 6,
+            "transactionid": null
+          },
+          {
+            "pid": 5544,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26142"
+          },
+          {
+            "pid": 21872,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26143"
+          },
+          {
+            "pid": 24088,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26145"
+          },
+          {
+            "pid": 24088,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26143"
+          },
+          {
+            "pid": 24088,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 5,
+            "transactionid": null
+          }
+        ]
+      },
+      "one_gate_released": {
+        "activity": [
+          {
+            "pid": 3988,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              24088
+            ]
+          },
+          {
+            "pid": 5544,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 21872,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 24088,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              21872
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 3988,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26144"
+          },
+          {
+            "pid": 3988,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26145"
+          },
+          {
+            "pid": 3988,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 3,
+            "transactionid": null
+          },
+          {
+            "pid": 21872,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26143"
+          },
+          {
+            "pid": 24088,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26145"
+          },
+          {
+            "pid": 24088,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26143"
+          },
+          {
+            "pid": 24088,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 5,
+            "transactionid": null
+          }
+        ]
+      },
+      "cycle": {
+        "activity": [
+          {
+            "pid": 3988,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              24088
+            ]
+          },
+          {
+            "pid": 5544,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 21872,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 24088,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              3988
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 3988,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26144"
+          },
+          {
+            "pid": 3988,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26145"
+          },
+          {
+            "pid": 3988,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 3,
+            "transactionid": null
+          },
+          {
+            "pid": 24088,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26145"
+          },
+          {
+            "pid": 24088,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26144"
+          },
+          {
+            "pid": 24088,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          }
+        ]
+      }
+    },
+    {
+      "case": "crossed-B-1",
+      "pids": {
+        "gate_A": 5448,
+        "gate_B": 21024,
+        "A": 7832,
+        "B": 23216
+      },
+      "responses": [
+        [
+          "A",
+          200,
+          {
+            "plan_id": "cef64ff8-578d-435d-85dd-788e4c63a55e",
+            "title": "잠금 재현",
+            "items": [
+              {
+                "ingredient_id": 10,
+                "name": "item-10",
+                "quantity": 1.0,
+                "unit": "개",
+                "remaining_quantity": 4.0
+              },
+              {
+                "ingredient_id": 40,
+                "name": "item-40",
+                "quantity": 1.0,
+                "unit": "개",
+                "remaining_quantity": 4.0
+              }
+            ]
+          }
+        ],
+        [
+          "B",
+          500,
+          {
+            "detail": "Internal server error"
+          }
+        ]
+      ],
+      "box_tuple_map": [
+        {
+          "id": 100,
+          "ctid": "(0,1)"
+        },
+        {
+          "id": 101,
+          "ctid": "(0,3)"
+        },
+        {
+          "id": 200,
+          "ctid": "(0,2)"
+        }
+      ],
+      "box_probes": [
+        {
+          "box": 100,
+          "sqlstate": "55P03"
+        },
+        {
+          "box": 101,
+          "sqlstate": "55P03"
+        }
+      ],
+      "before": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 20,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 30,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          },
+          {
+            "user_id": 2,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          }
+        ]
+      },
+      "after": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 4.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 20,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 30,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 4.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 10,
+            "quantity": 1.0
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 40,
+            "quantity": 1.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": "2026-11-07 02:17:05.956452+00:00",
+            "request_hash": "565d9ef29516080d3d075bcf262e5dc4ddf15c1c3442a3e1488419ff575ddff9",
+            "result": {
+              "items": [
+                {
+                  "name": "item-10",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 10,
+                  "remaining_quantity": 4.0
+                },
+                {
+                  "name": "item-40",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 40,
+                  "remaining_quantity": 4.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "cef64ff8-578d-435d-85dd-788e4c63a55e"
+            }
+          },
+          {
+            "user_id": 2,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          }
+        ]
+      },
+      "after_retry": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 4.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 20,
+            "quantity": 4.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 30,
+            "quantity": 4.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 4.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 10,
+            "quantity": 1.0
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 40,
+            "quantity": 1.0
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 20,
+            "quantity": 1.0
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 30,
+            "quantity": 1.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": "2026-11-07 02:17:05.956452+00:00",
+            "request_hash": "565d9ef29516080d3d075bcf262e5dc4ddf15c1c3442a3e1488419ff575ddff9",
+            "result": {
+              "items": [
+                {
+                  "name": "item-10",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 10,
+                  "remaining_quantity": 4.0
+                },
+                {
+                  "name": "item-40",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 40,
+                  "remaining_quantity": 4.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "cef64ff8-578d-435d-85dd-788e4c63a55e"
+            }
+          },
+          {
+            "user_id": 2,
+            "applied_at": "2026-11-07 02:17:06.057025+00:00",
+            "request_hash": "c7c91f8d8d8d5f5b02cf608cd04815d06a9e6b165e6648ee46bd222696dc07b9",
+            "result": {
+              "items": [
+                {
+                  "name": "item-20",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 20,
+                  "remaining_quantity": 4.0
+                },
+                {
+                  "name": "item-30",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 30,
+                  "remaining_quantity": 4.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "194dbe56-c354-4dad-b48c-4d53f4a12780"
+            }
+          }
+        ]
+      },
+      "connections_released_locks": true,
+      "errors": [
+        {
+          "worker": "B",
+          "sqlstate": "40P01",
+          "detail": "<class 'asyncpg.exceptions.DeadlockDetectedError'>: deadlock 발생했음\nDETAIL:  23216 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26157); 7832 프로세스에 의해 블록킹되었음\n7832 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26156); 23216 프로세스에 의해 블록킹되었음\nHINT:  쿼리 상세 정보는 서버 로그를 참조하십시오."
+        }
+      ],
+      "gated": {
+        "activity": [
+          {
+            "pid": 5448,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 7832,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              5448
+            ]
+          },
+          {
+            "pid": 21024,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 23216,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              21024
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 5448,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26154"
+          },
+          {
+            "pid": 7832,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26157"
+          },
+          {
+            "pid": 7832,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26154"
+          },
+          {
+            "pid": 7832,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 6,
+            "transactionid": null
+          },
+          {
+            "pid": 21024,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26155"
+          },
+          {
+            "pid": 23216,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26156"
+          },
+          {
+            "pid": 23216,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26155"
+          },
+          {
+            "pid": 23216,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 5,
+            "transactionid": null
+          }
+        ]
+      },
+      "one_gate_released": {
+        "activity": [
+          {
+            "pid": 5448,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 7832,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              5448
+            ]
+          },
+          {
+            "pid": 21024,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 23216,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              7832
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 5448,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26154"
+          },
+          {
+            "pid": 7832,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26157"
+          },
+          {
+            "pid": 7832,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26154"
+          },
+          {
+            "pid": 7832,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 6,
+            "transactionid": null
+          },
+          {
+            "pid": 23216,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26156"
+          },
+          {
+            "pid": 23216,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26157"
+          },
+          {
+            "pid": 23216,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          }
+        ]
+      },
+      "cycle": {
+        "activity": [
+          {
+            "pid": 5448,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 7832,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              23216
+            ]
+          },
+          {
+            "pid": 21024,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 23216,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              7832
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 7832,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26157"
+          },
+          {
+            "pid": 7832,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26156"
+          },
+          {
+            "pid": 7832,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 3,
+            "transactionid": null
+          },
+          {
+            "pid": 23216,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26156"
+          },
+          {
+            "pid": 23216,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26157"
+          },
+          {
+            "pid": 23216,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          }
+        ]
+      }
+    },
+    {
+      "case": "crossed-A-5",
+      "pids": {
+        "gate_A": 19100,
+        "gate_B": 21264,
+        "A": 26500,
+        "B": 10500
+      },
+      "responses": [
+        [
+          "A",
+          500,
+          {
+            "detail": "Internal server error"
+          }
+        ],
+        [
+          "B",
+          200,
+          {
+            "plan_id": "7efc5bb9-9b83-4a3a-a060-aa52521aea9e",
+            "title": "잠금 재현",
+            "items": [
+              {
+                "ingredient_id": 20,
+                "name": "item-20",
+                "quantity": 5.0,
+                "unit": "개",
+                "remaining_quantity": 0.0
+              },
+              {
+                "ingredient_id": 30,
+                "name": "item-30",
+                "quantity": 5.0,
+                "unit": "개",
+                "remaining_quantity": 0.0
+              }
+            ]
+          }
+        ]
+      ],
+      "box_tuple_map": [
+        {
+          "id": 100,
+          "ctid": "(0,1)"
+        },
+        {
+          "id": 101,
+          "ctid": "(0,3)"
+        },
+        {
+          "id": 200,
+          "ctid": "(0,2)"
+        }
+      ],
+      "box_probes": [
+        {
+          "box": 100,
+          "sqlstate": "55P03"
+        },
+        {
+          "box": 101,
+          "sqlstate": "55P03"
+        }
+      ],
+      "before": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 20,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 30,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          },
+          {
+            "user_id": 2,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          }
+        ]
+      },
+      "after": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 20,
+            "quantity": 5.0
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 30,
+            "quantity": 5.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          },
+          {
+            "user_id": 2,
+            "applied_at": "2026-11-07 02:17:08.337376+00:00",
+            "request_hash": "e9eaaba20e1489c9a443bdf985a28afcca70155eda7814be848544f90a04af8b",
+            "result": {
+              "items": [
+                {
+                  "name": "item-20",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 20,
+                  "remaining_quantity": 0.0
+                },
+                {
+                  "name": "item-30",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 30,
+                  "remaining_quantity": 0.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "7efc5bb9-9b83-4a3a-a060-aa52521aea9e"
+            }
+          }
+        ]
+      },
+      "after_retry": {
+        "stock": [
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 20,
+            "quantity": 5.0
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 30,
+            "quantity": 5.0
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 10,
+            "quantity": 5.0
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 40,
+            "quantity": 5.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": "2026-11-07 02:17:08.421051+00:00",
+            "request_hash": "6319997086b95d72f858f992d580d2a56404ce4ad3b4fd1b5def03cda2f2e44b",
+            "result": {
+              "items": [
+                {
+                  "name": "item-10",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 10,
+                  "remaining_quantity": 0.0
+                },
+                {
+                  "name": "item-40",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 40,
+                  "remaining_quantity": 0.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "50c37fca-974e-4061-9130-4b9ed512b3c5"
+            }
+          },
+          {
+            "user_id": 2,
+            "applied_at": "2026-11-07 02:17:08.337376+00:00",
+            "request_hash": "e9eaaba20e1489c9a443bdf985a28afcca70155eda7814be848544f90a04af8b",
+            "result": {
+              "items": [
+                {
+                  "name": "item-20",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 20,
+                  "remaining_quantity": 0.0
+                },
+                {
+                  "name": "item-30",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 30,
+                  "remaining_quantity": 0.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "7efc5bb9-9b83-4a3a-a060-aa52521aea9e"
+            }
+          }
+        ]
+      },
+      "connections_released_locks": true,
+      "errors": [
+        {
+          "worker": "A",
+          "sqlstate": "40P01",
+          "detail": "<class 'asyncpg.exceptions.DeadlockDetectedError'>: deadlock 발생했음\nDETAIL:  26500 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26169); 10500 프로세스에 의해 블록킹되었음\n10500 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26168); 26500 프로세스에 의해 블록킹되었음\nHINT:  쿼리 상세 정보는 서버 로그를 참조하십시오."
+        }
+      ],
+      "gated": {
+        "activity": [
+          {
+            "pid": 10500,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              21264
+            ]
+          },
+          {
+            "pid": 19100,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 21264,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 26500,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              19100
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 10500,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26169"
+          },
+          {
+            "pid": 10500,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26167"
+          },
+          {
+            "pid": 10500,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 5,
+            "transactionid": null
+          },
+          {
+            "pid": 19100,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26166"
+          },
+          {
+            "pid": 21264,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26167"
+          },
+          {
+            "pid": 26500,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26168"
+          },
+          {
+            "pid": 26500,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26166"
+          },
+          {
+            "pid": 26500,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 6,
+            "transactionid": null
+          }
+        ]
+      },
+      "one_gate_released": {
+        "activity": [
+          {
+            "pid": 10500,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              21264
+            ]
+          },
+          {
+            "pid": 19100,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 21264,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 26500,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              10500
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 10500,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26169"
+          },
+          {
+            "pid": 10500,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26167"
+          },
+          {
+            "pid": 10500,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 5,
+            "transactionid": null
+          },
+          {
+            "pid": 21264,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26167"
+          },
+          {
+            "pid": 26500,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26168"
+          },
+          {
+            "pid": 26500,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26169"
+          },
+          {
+            "pid": 26500,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 3,
+            "transactionid": null
+          }
+        ]
+      },
+      "cycle": {
+        "activity": [
+          {
+            "pid": 10500,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              26500
+            ]
+          },
+          {
+            "pid": 19100,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 21264,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 26500,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              10500
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 10500,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26169"
+          },
+          {
+            "pid": 10500,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26168"
+          },
+          {
+            "pid": 10500,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          },
+          {
+            "pid": 26500,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26168"
+          },
+          {
+            "pid": 26500,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26169"
+          },
+          {
+            "pid": 26500,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 3,
+            "transactionid": null
+          }
+        ]
+      }
+    },
+    {
+      "case": "crossed-B-5",
+      "pids": {
+        "gate_A": 15176,
+        "gate_B": 17364,
+        "B": 10372,
+        "A": 14156
+      },
+      "responses": [
+        [
+          "A",
+          200,
+          {
+            "plan_id": "a9931d65-6473-449a-8d7d-5ea40752f41d",
+            "title": "잠금 재현",
+            "items": [
+              {
+                "ingredient_id": 10,
+                "name": "item-10",
+                "quantity": 5.0,
+                "unit": "개",
+                "remaining_quantity": 0.0
+              },
+              {
+                "ingredient_id": 40,
+                "name": "item-40",
+                "quantity": 5.0,
+                "unit": "개",
+                "remaining_quantity": 0.0
+              }
+            ]
+          }
+        ],
+        [
+          "B",
+          500,
+          {
+            "detail": "Internal server error"
+          }
+        ]
+      ],
+      "box_tuple_map": [
+        {
+          "id": 100,
+          "ctid": "(0,1)"
+        },
+        {
+          "id": 101,
+          "ctid": "(0,3)"
+        },
+        {
+          "id": 200,
+          "ctid": "(0,2)"
+        }
+      ],
+      "box_probes": [
+        {
+          "box": 100,
+          "sqlstate": "55P03"
+        },
+        {
+          "box": 101,
+          "sqlstate": "55P03"
+        }
+      ],
+      "before": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 20,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 30,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          },
+          {
+            "user_id": 2,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          }
+        ]
+      },
+      "after": {
+        "stock": [
+          {
+            "id": 20,
+            "quantity": 5.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 30,
+            "quantity": 5.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 10,
+            "quantity": 5.0
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 40,
+            "quantity": 5.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": "2026-11-07 02:17:10.731460+00:00",
+            "request_hash": "6319997086b95d72f858f992d580d2a56404ce4ad3b4fd1b5def03cda2f2e44b",
+            "result": {
+              "items": [
+                {
+                  "name": "item-10",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 10,
+                  "remaining_quantity": 0.0
+                },
+                {
+                  "name": "item-40",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 40,
+                  "remaining_quantity": 0.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "a9931d65-6473-449a-8d7d-5ea40752f41d"
+            }
+          },
+          {
+            "user_id": 2,
+            "applied_at": null,
+            "request_hash": null,
+            "result": null
+          }
+        ]
+      },
+      "after_retry": {
+        "stock": [
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 10,
+            "quantity": 5.0
+          },
+          {
+            "user_id": 1,
+            "ingredient_id": 40,
+            "quantity": 5.0
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 20,
+            "quantity": 5.0
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 30,
+            "quantity": 5.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 1,
+            "applied_at": "2026-11-07 02:17:10.731460+00:00",
+            "request_hash": "6319997086b95d72f858f992d580d2a56404ce4ad3b4fd1b5def03cda2f2e44b",
+            "result": {
+              "items": [
+                {
+                  "name": "item-10",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 10,
+                  "remaining_quantity": 0.0
+                },
+                {
+                  "name": "item-40",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 40,
+                  "remaining_quantity": 0.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "a9931d65-6473-449a-8d7d-5ea40752f41d"
+            }
+          },
+          {
+            "user_id": 2,
+            "applied_at": "2026-11-07 02:17:10.824504+00:00",
+            "request_hash": "e9eaaba20e1489c9a443bdf985a28afcca70155eda7814be848544f90a04af8b",
+            "result": {
+              "items": [
+                {
+                  "name": "item-20",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 20,
+                  "remaining_quantity": 0.0
+                },
+                {
+                  "name": "item-30",
+                  "unit": "개",
+                  "quantity": 5.0,
+                  "ingredient_id": 30,
+                  "remaining_quantity": 0.0
+                }
+              ],
+              "title": "잠금 재현",
+              "plan_id": "9c3de452-ae0b-4f93-a3b3-b79994fb0abf"
+            }
+          }
+        ]
+      },
+      "connections_released_locks": true,
+      "errors": [
+        {
+          "worker": "B",
+          "sqlstate": "40P01",
+          "detail": "<class 'asyncpg.exceptions.DeadlockDetectedError'>: deadlock 발생했음\nDETAIL:  10372 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26181); 14156 프로세스에 의해 블록킹되었음\n14156 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26180); 10372 프로세스에 의해 블록킹되었음\nHINT:  쿼리 상세 정보는 서버 로그를 참조하십시오."
+        }
+      ],
+      "gated": {
+        "activity": [
+          {
+            "pid": 10372,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              17364
+            ]
+          },
+          {
+            "pid": 14156,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              15176
+            ]
+          },
+          {
+            "pid": 15176,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 17364,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 10372,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26180"
+          },
+          {
+            "pid": 10372,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26179"
+          },
+          {
+            "pid": 10372,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 5,
+            "transactionid": null
+          },
+          {
+            "pid": 14156,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26181"
+          },
+          {
+            "pid": 14156,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26178"
+          },
+          {
+            "pid": 14156,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 6,
+            "transactionid": null
+          },
+          {
+            "pid": 15176,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26178"
+          },
+          {
+            "pid": 17364,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26179"
+          }
+        ]
+      },
+      "one_gate_released": {
+        "activity": [
+          {
+            "pid": 10372,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              14156
+            ]
+          },
+          {
+            "pid": 14156,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              15176
+            ]
+          },
+          {
+            "pid": 15176,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 17364,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 10372,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26180"
+          },
+          {
+            "pid": 10372,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26181"
+          },
+          {
+            "pid": 10372,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          },
+          {
+            "pid": 14156,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26181"
+          },
+          {
+            "pid": 14156,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26178"
+          },
+          {
+            "pid": 14156,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 6,
+            "transactionid": null
+          },
+          {
+            "pid": 15176,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26178"
+          }
+        ]
+      },
+      "cycle": {
+        "activity": [
+          {
+            "pid": 10372,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              14156
+            ]
+          },
+          {
+            "pid": 14156,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              10372
+            ]
+          },
+          {
+            "pid": 15176,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          },
+          {
+            "pid": 17364,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 10372,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26180"
+          },
+          {
+            "pid": 10372,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26181"
+          },
+          {
+            "pid": 10372,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          },
+          {
+            "pid": 14156,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26181"
+          },
+          {
+            "pid": 14156,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26180"
+          },
+          {
+            "pid": 14156,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 3,
+            "transactionid": null
+          }
+        ]
+      }
+    },
+    {
+      "case": "cooking-reorder",
+      "pids": {
+        "gate": 11548,
+        "cooking": 3428,
+        "reorder": 2416
+      },
+      "statuses": [
+        200,
+        500
+      ],
+      "after": {
+        "stock": [
+          {
+            "id": 10,
+            "quantity": 4.0,
+            "storage_box_id": 100
+          },
+          {
+            "id": 40,
+            "quantity": 4.0,
+            "storage_box_id": 101
+          },
+          {
+            "id": 1000,
+            "quantity": 5.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 10,
+            "quantity": 1.0
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 40,
+            "quantity": 1.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 2,
+            "applied_at": "2026-11-07 02:17:12.860886+00:00",
+            "request_hash": "1c04e435918293813d4718b90566409ad2be342a9c1b2c173aa2182cbbe377ea",
+            "result": {
+              "items": [
+                {
+                  "name": "X item",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 10,
+                  "remaining_quantity": 4.0
+                },
+                {
+                  "name": "Y item",
+                  "unit": "개",
+                  "quantity": 1.0,
+                  "ingredient_id": 40,
+                  "remaining_quantity": 4.0
+                }
+              ],
+              "title": "정렬 충돌",
+              "plan_id": "3d27d4b3-2cd5-4e18-9080-11ba852e5e68"
+            }
+          }
+        ]
+      },
+      "box_orders": [
+        [
+          100,
+          0
+        ],
+        [
+          101,
+          1
+        ],
+        [
+          200,
+          0
+        ]
+      ],
+      "errors": [
+        {
+          "sqlstate": "40P01",
+          "detail": "<class 'asyncpg.exceptions.DeadlockDetectedError'>: deadlock 발생했음\nDETAIL:  2416 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26190); 3428 프로세스에 의해 블록킹되었음\n3428 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26191); 2416 프로세스에 의해 블록킹되었음\nHINT:  쿼리 상세 정보는 서버 로그를 참조하십시오."
+        }
+      ],
+      "before_release": {
+        "activity": [
+          {
+            "pid": 2416,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              3428
+            ]
+          },
+          {
+            "pid": 3428,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              11548
+            ]
+          },
+          {
+            "pid": 11548,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 2416,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26191"
+          },
+          {
+            "pid": 2416,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26190"
+          },
+          {
+            "pid": 2416,
+            "locktype": "tuple",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          },
+          {
+            "pid": 3428,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26190"
+          },
+          {
+            "pid": 3428,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26189"
+          },
+          {
+            "pid": 3428,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 4,
+            "transactionid": null
+          },
+          {
+            "pid": 11548,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26189"
+          }
+        ]
+      },
+      "cycle": {
+        "activity": [
+          {
+            "pid": 2416,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              3428
+            ]
+          },
+          {
+            "pid": 3428,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              2416
+            ]
+          },
+          {
+            "pid": 11548,
+            "state": "idle",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 2416,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26191"
+          },
+          {
+            "pid": 2416,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26190"
+          },
+          {
+            "pid": 2416,
+            "locktype": "tuple",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          },
+          {
+            "pid": 3428,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26190"
+          },
+          {
+            "pid": 3428,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26191"
+          },
+          {
+            "pid": 3428,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "storage_boxes",
+            "page": 0,
+            "tuple": 3,
+            "transactionid": null
+          }
+        ]
+      }
+    },
+    {
+      "case": "cooking-fridge-delete",
+      "pids": {
+        "cooking": 10528,
+        "delete": 8576
+      },
+      "statuses": [
+        200,
+        500
+      ],
+      "after": {
+        "stock": [
+          {
+            "id": 1000,
+            "quantity": 4.5,
+            "storage_box_id": 100
+          },
+          {
+            "id": 2000,
+            "quantity": 3.0,
+            "storage_box_id": 200
+          }
+        ],
+        "logs": [
+          {
+            "user_id": 1,
+            "ingredient_id": 999,
+            "quantity": 0.5
+          },
+          {
+            "user_id": 2,
+            "ingredient_id": 1000,
+            "quantity": 1.0
+          }
+        ],
+        "plans": [
+          {
+            "user_id": 2,
+            "applied_at": "2026-11-07 02:17:17.643262+00:00",
+            "request_hash": "f338f5c959198a4751a2b64c2c0a8648107e57b01328a2511ffd4721f1328b1b",
+            "result": {
+              "items": [
+                {
+                  "name": "당근",
+                  "unit": "kg",
+                  "quantity": 1.0,
+                  "ingredient_id": 1000,
+                  "remaining_quantity": 4.5
+                }
+              ],
+              "title": "삭제 충돌",
+              "plan_id": "39022b95-52e5-46e1-ae27-45182e36603e"
+            }
+          }
+        ]
+      },
+      "fridge_exists": true,
+      "errors": [
+        {
+          "sqlstate": "40P01",
+          "detail": "<class 'asyncpg.exceptions.DeadlockDetectedError'>: deadlock 발생했음\nDETAIL:  8576 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26220); 10528 프로세스에 의해 블록킹되었음\n10528 프로세스가 ShareLock 상태로 지연되고 있음(해당 작업: 트랜잭션 26221); 8576 프로세스에 의해 블록킹되었음\nHINT:  쿼리 상세 정보는 서버 로그를 참조하십시오."
+        }
+      ],
+      "delete_waiting": {
+        "activity": [
+          {
+            "pid": 8576,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              10528
+            ]
+          },
+          {
+            "pid": 10528,
+            "state": "idle in transaction",
+            "wait_event_type": "Client",
+            "wait_event": "ClientRead",
+            "blockers": []
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 8576,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26221"
+          },
+          {
+            "pid": 8576,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26220"
+          },
+          {
+            "pid": 8576,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "refrigerators",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          },
+          {
+            "pid": 10528,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26220"
+          }
+        ]
+      },
+      "cycle": {
+        "activity": [
+          {
+            "pid": 8576,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              10528
+            ]
+          },
+          {
+            "pid": 10528,
+            "state": "active",
+            "wait_event_type": "Lock",
+            "wait_event": "transactionid",
+            "blockers": [
+              8576
+            ]
+          }
+        ],
+        "wait_locks": [
+          {
+            "pid": 8576,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26221"
+          },
+          {
+            "pid": 8576,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26220"
+          },
+          {
+            "pid": 8576,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "refrigerators",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          },
+          {
+            "pid": 10528,
+            "locktype": "transactionid",
+            "mode": "ExclusiveLock",
+            "granted": true,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26220"
+          },
+          {
+            "pid": 10528,
+            "locktype": "transactionid",
+            "mode": "ShareLock",
+            "granted": false,
+            "relation": null,
+            "page": null,
+            "tuple": null,
+            "transactionid": "26221"
+          },
+          {
+            "pid": 10528,
+            "locktype": "tuple",
+            "mode": "AccessExclusiveLock",
+            "granted": true,
+            "relation": "ingredients",
+            "page": 0,
+            "tuple": 1,
+            "transactionid": null
+          }
+        ]
+      }
+    }
+  ],
+  "related_operations": [
+    {
+      "case": "related-create",
+      "dml": [
+        "INSERT INTO ingredients (storage_box_id, name, quantity, unit, expiry_date, expiry_source) VALUES ($1::INTEGER, $2::VARCHAR, $3::FLOAT, $4::VARCHAR, $5::DATE, $6::VARCHAR) RETURNING ingredients.id"
+      ],
+      "fk_probes": [
+        [
+          "storage_boxes",
+          "no_key_update",
+          "acquired"
+        ],
+        [
+          "storage_boxes",
+          "update",
+          "55P03"
+        ]
+      ],
+      "rollback_preserved_inventory": true
+    },
+    {
+      "case": "related-consume",
+      "dml": [
+        "UPDATE ingredients SET quantity=$1::FLOAT WHERE ingredients.id = $2::INTEGER",
+        "INSERT INTO ingredient_logs (user_id, refrigerator_id, refrigerator_name, ingredient_id, action_type, ingredient_name, quantity, unit, expiry_date, expiry_source, memo, created_at) VALUES ($1::INTEGER, $2::INTEGER, $3::VARCHAR, $4::INTEGER, $5::actiontype, $6::VARCHAR, $7::FLOAT, $8::VARCHAR, $9::DATE, $10::VARCHAR, $11::VARCHAR, $12::TIMESTAMP WITHOUT TIME ZONE) RETURNING ingredient_logs.id"
+      ],
+      "fk_probes": [
+        [
+          "users",
+          "no_key_update",
+          "acquired"
+        ],
+        [
+          "users",
+          "update",
+          "55P03"
+        ],
+        [
+          "refrigerators",
+          "no_key_update",
+          "acquired"
+        ],
+        [
+          "refrigerators",
+          "update",
+          "55P03"
+        ]
+      ],
+      "rollback_preserved_inventory": true
+    },
+    {
+      "case": "related-delete_box",
+      "dml": [
+        "DELETE FROM ingredients WHERE ingredients.id = $1::INTEGER",
+        "DELETE FROM storage_boxes WHERE storage_boxes.id = $1::INTEGER"
+      ],
+      "fk_probes": [],
+      "rollback_preserved_inventory": true
+    },
+    {
+      "case": "related-delete_fridge",
+      "dml": [
+        "DELETE FROM refrigerator_members WHERE refrigerator_members.id = $1::INTEGER",
+        "DELETE FROM ingredients WHERE ingredients.id = $1::INTEGER",
+        "DELETE FROM storage_boxes WHERE storage_boxes.id = $1::INTEGER",
+        "DELETE FROM refrigerators WHERE refrigerators.id = $1::INTEGER"
+      ],
+      "fk_probes": [],
+      "rollback_preserved_inventory": true
+    }
+  ],
+  "cleanup": {
+    "catalog_unchanged": true,
+    "remaining_test_pids": []
+  },
+  "test_results": {
+    "diagnostic": 10,
+    "existing_cooking_integration": 22
+  }
+}

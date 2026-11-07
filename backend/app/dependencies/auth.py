@@ -8,6 +8,8 @@ from app.models.refrigerator import MemberRole, RefrigeratorMember
 from app.models.storage import StorageBox
 from app.models.user import User
 from app.utils.security import decode_token
+from app.services.inventory_locks import lock_storage_boxes
+from app.services.sharing_service import lock_refrigerator
 
 security = HTTPBearer()
 
@@ -94,3 +96,14 @@ async def require_refrigerator_owner(
     if member.role != MemberRole.OWNER:
         raise HTTPException(403, "소유자만 변경할 수 있습니다.")
     return member
+
+
+async def lock_storage_box_for_write(storage_box: StorageBox, user: User, db: AsyncSession):
+    # Called by write handlers after body validation. The shared parent locks
+    # protect membership/metadata while independent ingredient writes can run.
+    fridge = await lock_refrigerator(storage_box.refrigerator_id, db, read=True)
+    await require_refrigerator_member(fridge.id, user, db)
+    boxes = await lock_storage_boxes([fridge.id], db, storage_box_ids=[storage_box.id], read=True)
+    if not boxes:
+        raise HTTPException(404, "Storage box not found")
+    return fridge

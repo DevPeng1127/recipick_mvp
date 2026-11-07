@@ -1,5 +1,15 @@
 # 소규모 배포 비용과 API 사용량 검토
 
+## 고정비 재확인 (2026-11-07)
+
+11-04에 저장한 실제 배포 설정과 11-07에 확인한 공식 가격을 기준으로, 현재 구성에 월 정액이나 최소 사용료 약정은 없다. Cloud Run은 최소 인스턴스 0의 요청 기반 과금, Firebase Hosting은 Blaze 사용량 과금, Neon과 Gemini 프로젝트는 Free 설정이다. 서비스별 무료량을 충족하면 해당 항목의 비용은 0원이 될 수 있다. [Cloud Run](https://cloud.google.com/run/pricing), [Firebase Hosting](https://firebase.google.com/pricing), [Neon](https://neon.com/pricing), [Gemini Free](https://ai.google.dev/gemini-api/docs/pricing)
+
+다만 **사용자가 적다는 조건만으로 전체 청구액 0원이 보장되지는 않는다**. Cloud Run의 외부 인터넷 전송 무료 1GiB는 북미 내 전송에 적용된다. 현재 Singapore에서 외부 사용자나 AWS의 Neon으로 보내는 트래픽에는 별도 전송 요금이 생길 수 있다. [네트워크 과금](https://cloud.google.com/run/pricing#networking)
+
+요청 수와 별도로 이미지 저장량·비밀키 버전 수도 계산한다. Artifact Registry는 계정 합산 0.5GiB, Secret Manager는 계정 합산 활성 6버전과 월 조회 10,000회가 무료다. 비활성화된 키 버전도 활성 버전 과금 개수에 포함된다. 저장량이 무료량을 넘으면 접속이 없는 기간에도 요금이 누적될 수 있다. 11-04 확인한 Recipick 비밀키 버전은 6개였으며 다른 프로젝트와 무료량을 공유한다. [이미지 저장](https://cloud.google.com/artifact-registry/pricing), [비밀키 관리](https://cloud.google.com/secret-manager/pricing)
+
+이번 요청의 운영 접근 제한에 따라 원격 리소스·DB·청구서는 재조회하지 않았다. 따라서 이 확인은 설정과 과금 방식에 관한 것이며 이번 달의 실제 청구액이나 남은 무료량을 확정한 결과는 아니다. 월 5,000원 예산은 기존 비용 알림 설정이며 자동 지출 상한 기능은 없다. 상세 한도와 초과 동작은 아래 11-04 확인표를 따른다.
+
 ## 현재 운영 사양·한도·과금 확인 (2026-11-04)
 
 사용자 요청으로 실제 운영 설정과 최신 공식 요금을 다시 확인했다. 이 절이 아래의 초기 조사/선택 전 기록보다 우선한다. 배포 코드는 `de2e409`, 운영 기록은 `bc2a1f5`다. 실제 결제액/청구서나 공급자별 모든 무료 잔여량을 조회한 견적은 아니다. USD 단가이며 원화 청구 SKU·환율·세금은 별도다. 조사 이력 ID **`INFRA-LIMITS-20261104`**.

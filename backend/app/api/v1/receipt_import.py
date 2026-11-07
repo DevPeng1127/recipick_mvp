@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.gemini_client import GeminiRequestError
 from app.database.connection import get_db
-from app.dependencies.auth import get_current_user, require_storage_box_member
+from app.dependencies.auth import get_current_user, lock_storage_box_for_write, require_storage_box_member
 from app.models.storage import StorageBox
 from app.models.user import User
 from app.schemas.ingredient import IngredientResponse
@@ -55,8 +55,10 @@ async def create_batch(
     storage_box_id: int,
     body: IngredientBatchCreate,
     storage_box: StorageBox = Depends(require_storage_box_member),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await lock_storage_box_for_write(storage_box, current_user, db)
     created = []
     for item in body.items:
         created.append(await create_ingredient(storage_box_id, item, db))

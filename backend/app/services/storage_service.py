@@ -3,6 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.storage import StorageBox
 from app.schemas.storage import StorageBoxCreate, StorageBoxUpdate
+from app.services.inventory_locks import lock_box_ingredients, lock_storage_boxes
+from app.services.sharing_service import lock_refrigerator
 
 
 async def list_storage_boxes(
@@ -19,6 +21,7 @@ async def list_storage_boxes(
 async def create_storage_box(
     refrigerator_id: int, data: StorageBoxCreate, db: AsyncSession
 ) -> StorageBox:
+    await lock_refrigerator(refrigerator_id, db, read=True)
     storage_box = StorageBox(
         refrigerator_id=refrigerator_id,
         name=data.name,
@@ -32,15 +35,11 @@ async def create_storage_box(
 async def update_storage_box(
     storage_box_id: int, refrigerator_id: int, data: StorageBoxUpdate, db: AsyncSession
 ) -> StorageBox | None:
-    result = await db.execute(
-        select(StorageBox).where(
-            StorageBox.id == storage_box_id,
-            StorageBox.refrigerator_id == refrigerator_id,
-        )
-    )
-    storage_box = result.scalar_one_or_none()
-    if storage_box is None:
+    await lock_refrigerator(refrigerator_id, db, read=True)
+    boxes = await lock_storage_boxes([refrigerator_id], db, storage_box_ids=[storage_box_id])
+    if not boxes:
         return None
+    storage_box = boxes[0]
 
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -53,17 +52,12 @@ async def update_storage_box(
 async def delete_storage_box(
     storage_box_id: int, refrigerator_id: int, db: AsyncSession
 ) -> bool:
-    result = await db.execute(
-        select(StorageBox).where(
-            StorageBox.id == storage_box_id,
-            StorageBox.refrigerator_id == refrigerator_id,
-        )
-    )
-    storage_box = result.scalar_one_or_none()
-    if storage_box is None:
+    await lock_refrigerator(refrigerator_id, db, read=True)
+    boxes = await lock_storage_boxes([refrigerator_id], db, storage_box_ids=[storage_box_id])
+    if not boxes:
         return False
-
-    await db.delete(storage_box)
+    await lock_box_ingredients([storage_box_id], db)
+    await db.delete(boxes[0])
     await db.flush()
     return True
 
@@ -71,6 +65,9 @@ async def delete_storage_box(
 async def reorder_storage_boxes(
     refrigerator_id: int, ordered_ids: list[int], db: AsyncSession
 ) -> None:
+    await lock_refrigerator(refrigerator_id, db, read=True)
+    await lock_storage_boxes([refrigerator_id], db, storage_box_ids=ordered_ids)
+    # The requested display order is independent of lock acquisition order.
     for idx, box_id in enumerate(ordered_ids):
         await db.execute(
             update(StorageBox)

@@ -47,6 +47,7 @@ async def reorder_boxes(
     db: AsyncSession = Depends(get_db),
 ):
     await reorder_storage_boxes(refrigerator_id, data.ordered_ids, db)
+    await db.commit()
 
 
 @router.put("/{storage_box_id}", response_model=StorageBoxResponse)
@@ -73,3 +74,4 @@ async def delete_box(
     deleted = await delete_storage_box(storage_box_id, refrigerator_id, db)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Storage box not found")
+    await db.commit()

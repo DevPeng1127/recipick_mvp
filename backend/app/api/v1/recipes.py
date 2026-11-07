@@ -65,7 +65,10 @@ async def cooking_preview(plan_id: UUID, user: User = Depends(get_current_user),
 
 @router.post("/{plan_id}/consume")
 async def consume_recipe(plan_id: UUID, body: CookingCommit, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    return await cooking_service.commit(plan_id, user.id, body, db)
+    result = await cooking_service.commit(plan_id, user.id, body, db)
+    # Complete the transaction before the response can report success.
+    await db.commit()
+    return result
 
 
 @router.post("/{plan_id}/repeat", response_model=RecipeResponse, status_code=201)

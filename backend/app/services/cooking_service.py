@@ -15,6 +15,7 @@ from app.models.ingredient_log import ActionType, IngredientLog
 from app.models.refrigerator import Refrigerator, RefrigeratorMember
 from app.models.storage import StorageBox
 from app.schemas.recipe import CookingCommit, CookingPreview, CookingStock, CookingSuggestion, GeneratedRecipe
+from app.services.inventory_locks import lock_storage_boxes
 
 
 async def authorize(refrigerator_ids: list[int], user_id: int, db: AsyncSession, *, lock=False):
@@ -65,7 +66,11 @@ async def stock_rows(ids: list[int], db: AsyncSession, *, item_ids=None, lock=Fa
     if item_ids is not None:
         query = query.where(Ingredient.id.in_(item_ids))
     if lock:
-        query = query.with_for_update(of=(Ingredient, StorageBox))
+        boxes = await lock_storage_boxes(ids, db, ingredient_ids=item_ids, read=True)
+        # Re-read under locks and exclude any item moved to an unlocked box
+        # between discovering its parent and locking it. commit rejects it.
+        query = query.where(StorageBox.id.in_([box.id for box in boxes]))
+        query = query.with_for_update(of=Ingredient)
     return (await db.execute(query.execution_options(populate_existing=True))).all()
 
 

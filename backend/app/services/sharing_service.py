@@ -55,10 +55,10 @@ async def list_invitations(refrigerator_id: int, db: AsyncSession):
     return [invitation_response(i) for i in invites]
 
 
-async def lock_refrigerator(refrigerator_id: int, db: AsyncSession):
+async def lock_refrigerator(refrigerator_id: int, db: AsyncSession, *, read: bool = False):
     fridge = await db.scalar(select(Refrigerator).where(
         Refrigerator.id == refrigerator_id
-    ).with_for_update())
+    ).with_for_update(read=read).execution_options(populate_existing=True))
     if fridge is None:
         raise HTTPException(404, "냉장고를 찾을 수 없습니다.")
     return fridge

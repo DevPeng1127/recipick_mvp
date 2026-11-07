@@ -50,6 +50,9 @@ def inventory():
         id=20, storage_box_id=10, name="우유", quantity=2.5, unit="L",
         expiry_date=date(2026, 12, 31), expiry_source="unknown",
     )
+    db.scalar.return_value = fridge
+    db.scalars.return_value = MagicMock()
+    db.scalars.return_value.all.return_value = [box]
     db.execute.return_value.scalar_one.return_value = fridge
     db.execute.return_value.scalar_one_or_none.return_value = ingredient
 

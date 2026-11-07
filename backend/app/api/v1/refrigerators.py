@@ -81,6 +81,7 @@ async def reorder_refrigerators_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     await reorder_refrigerators(current_user.id, data.ordered_ids, db)
+    await db.commit()
 
 
 @router.get("/{refrigerator_id}", response_model=RefrigeratorDetailResponse)
@@ -125,6 +126,7 @@ async def delete_refrigerator_endpoint(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the owner can delete a refrigerator",
         )
+    await db.commit()
 
 
 @router.patch("/{refrigerator_id}/favorite")

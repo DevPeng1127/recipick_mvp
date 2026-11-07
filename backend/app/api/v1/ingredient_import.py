@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.receipt_import import recognize_receipt
@@ -16,6 +15,7 @@ from app.schemas.receipt import ReceiptPreview, RefrigeratorIngredientBatchCreat
 from app.schemas.storage import StorageBoxResponse
 from app.services.ingredient_service import create_ingredient
 from app.services.sharing_service import lock_refrigerator
+from app.services.inventory_locks import lock_storage_boxes
 
 router = APIRouter(tags=["ingredient import"])
 FRIDGE = "/refrigerators/{refrigerator_id}/ingredients"
@@ -58,10 +58,7 @@ async def create_distributed_batch(
     await lock_refrigerator(refrigerator_id, db)
     await require_refrigerator_member(refrigerator_id, current_user, db)
     requested_ids = {item.storage_box_id for item in body.items}
-    boxes = (await db.scalars(select(StorageBox).where(
-        StorageBox.refrigerator_id == refrigerator_id,
-        StorageBox.id.in_(requested_ids),
-    ).order_by(StorageBox.id).with_for_update())).all()
+    boxes = await lock_storage_boxes([refrigerator_id], db, storage_box_ids=requested_ids)
     if {box.id for box in boxes} != requested_ids:
         raise HTTPException(409, "보관함이 변경되었거나 이 냉장고에 속하지 않습니다. 보관함을 다시 선택해 주세요.")
     created = [await create_ingredient(item.storage_box_id, item, db) for item in body.items]

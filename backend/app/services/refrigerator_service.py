@@ -6,6 +6,7 @@ from app.models.refrigerator import MemberRole, Refrigerator, RefrigeratorMember
 from app.models.storage import StorageBox
 from app.models.user import User
 from app.schemas.refrigerator import RefrigeratorCreate, RefrigeratorUpdate
+from app.services.inventory_locks import lock_box_ingredients, lock_storage_boxes
 
 
 async def list_refrigerators(
@@ -106,11 +107,23 @@ async def delete_refrigerator(
 
     result = await db.execute(
         select(Refrigerator).where(Refrigerator.id == refrigerator_id)
+        .with_for_update().execution_options(populate_existing=True)
     )
     refrigerator = result.scalar_one_or_none()
     if refrigerator is None:
         return False
 
+    # Serialize with membership changes and all inventory writes before ORM
+    # cascade deletion touches members or children.
+    owner = await db.scalar(select(RefrigeratorMember.id).where(
+        RefrigeratorMember.refrigerator_id == refrigerator_id,
+        RefrigeratorMember.user_id == user_id,
+        RefrigeratorMember.role == MemberRole.OWNER,
+    ))
+    if owner is None:
+        return False
+    boxes = await lock_storage_boxes([refrigerator_id], db)
+    await lock_box_ingredients([box.id for box in boxes], db)
     await db.delete(refrigerator)
     await db.flush()
     return True

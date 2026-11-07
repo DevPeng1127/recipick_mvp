@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.connection import get_db
-from app.dependencies.auth import get_current_user, require_refrigerator_member, require_storage_box_member
+from app.dependencies.auth import get_current_user, lock_storage_box_for_write, require_refrigerator_member, require_storage_box_member
 from app.models.ingredient_log import ActionType
-from app.models.refrigerator import Refrigerator, RefrigeratorMember
+from app.models.refrigerator import RefrigeratorMember
 from app.models.storage import StorageBox
 from app.models.user import User
 from app.schemas.ingredient import (
@@ -27,6 +26,7 @@ from app.services.ingredient_service import (
     update_ingredient,
 )
 from app.services.sharing_service import lock_refrigerator
+from app.services.inventory_locks import lock_storage_boxes
 
 router = APIRouter(tags=["ingredients"])
 
@@ -63,8 +63,10 @@ async def create(
     storage_box_id: int,
     data: IngredientCreate,
     storage_box: StorageBox = Depends(require_storage_box_member),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await lock_storage_box_for_write(storage_box, current_user, db)
     return await create_ingredient(storage_box_id, data, db)
 
 
@@ -81,6 +83,7 @@ async def bulk_action(
 ):
     refrigerator = await lock_refrigerator(storage_box.refrigerator_id, db)
     await require_refrigerator_member(storage_box.refrigerator_id, current_user, db)
+    await lock_storage_boxes([refrigerator.id], db, storage_box_ids=[storage_box_id], read=True)
     try:
         await bulk_action_ingredients(storage_box_id, current_user.id, refrigerator, data, db)
     except ValueError:
@@ -101,8 +104,10 @@ async def update(
     ingredient_id: int,
     data: IngredientUpdate,
     storage_box: StorageBox = Depends(require_storage_box_member),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await lock_storage_box_for_write(storage_box, current_user, db)
     try:
         ingredient = await update_ingredient(ingredient_id, storage_box_id, data, db)
     except ValueError as error:
@@ -126,6 +131,7 @@ async def delete_registration(
     # Sharing changes use this lock; recheck access after waiting for it.
     await lock_refrigerator(storage_box.refrigerator_id, db)
     await require_refrigerator_member(storage_box.refrigerator_id, current_user, db)
+    await lock_storage_boxes([storage_box.refrigerator_id], db, storage_box_ids=[storage_box_id], read=True)
     await delete_ingredient(ingredient_id, storage_box_id, db)
     # An already absent item also succeeds, so a lost response can be retried safely.
     # Explicitly commit before reporting success. get_db rolls back any failure.
@@ -142,11 +148,7 @@ async def _consume_or_dispose(
     current_user: User,
     db: AsyncSession,
 ) -> Response:
-    # 냉장고 이름 조회
-    result = await db.execute(
-        select(Refrigerator).where(Refrigerator.id == storage_box.refrigerator_id)
-    )
-    refrigerator = result.scalar_one()
+    refrigerator = await lock_storage_box_for_write(storage_box, current_user, db)
 
     try:
         updated = await consume_or_dispose_ingredient(

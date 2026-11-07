@@ -67,7 +67,9 @@ async def create(
     db: AsyncSession = Depends(get_db),
 ):
     await lock_storage_box_for_write(storage_box, current_user, db)
-    return await create_ingredient(storage_box_id, data, db)
+    ingredient = await create_ingredient(storage_box_id, data, db)
+    await db.commit()
+    return ingredient
 
 
 @router.post(
@@ -114,6 +116,7 @@ async def update(
         raise HTTPException(422, detail=str(error))
     if ingredient is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ingredient not found")
+    await db.commit()
     return ingredient
 
 
@@ -166,6 +169,7 @@ async def _consume_or_dispose(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+    await db.commit()
     if updated is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     return updated

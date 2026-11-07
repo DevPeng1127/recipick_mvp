@@ -63,7 +63,9 @@ async def create_new_refrigerator(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_refrigerator(current_user.id, data, db)
+    refrigerator = await create_refrigerator(current_user.id, data, db)
+    await db.commit()
+    return refrigerator
 
 
 @router.post("/initial", response_model=RefrigeratorResponse)
@@ -71,7 +73,9 @@ async def prepare_initial_refrigerator(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await ensure_initial_refrigerator(current_user.id, db)
+    refrigerator = await ensure_initial_refrigerator(current_user.id, db)
+    await db.commit()
+    return refrigerator
 
 
 @router.put("/reorder", status_code=status.HTTP_204_NO_CONTENT)
@@ -111,6 +115,7 @@ async def update_refrigerator_endpoint(
     refrigerator = await update_refrigerator(refrigerator_id, data, db)
     if refrigerator is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Refrigerator not found")
+    await db.commit()
     return refrigerator
 
 
@@ -138,4 +143,5 @@ async def toggle_favorite_endpoint(
     result = await toggle_favorite(current_user.id, refrigerator_id, db)
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership not found")
+    await db.commit()
     return {"is_favorite": result}

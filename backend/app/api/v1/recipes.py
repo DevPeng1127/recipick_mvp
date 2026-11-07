@@ -55,6 +55,7 @@ async def recommend(
         }) from None
     except (ValidationError, GeminiRequestError):
         raise HTTPException(502, "메뉴 추천 결과를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.") from None
+    await db.commit()
     return result
 
 
@@ -74,4 +75,5 @@ async def consume_recipe(plan_id: UUID, body: CookingCommit, user: User = Depend
 @router.post("/{plan_id}/repeat", response_model=RecipeResponse, status_code=201)
 async def repeat_recipe(plan_id: UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     plan = await cooking_service.repeat(plan_id, user.id, db)
+    await db.commit()
     return RecipeResponse(recipe=plan.recipe, plan_id=plan.id)

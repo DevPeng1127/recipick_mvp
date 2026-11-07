@@ -1,7 +1,7 @@
 from uuid import UUID
 from app.schemas.recipe import GeneratedRecipe
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -50,13 +50,17 @@ def recipe_context(monkeypatch):
         ai = AsyncMock(return_value=GeneratedRecipe(title="Test recipe", recipe="Test recipe",
             requirements=[{"ingredient_name": "두부", "quantity": 1, "unit": "개"}]))
         plans = AsyncMock(return_value=SimpleNamespace(id=UUID("00000000-0000-0000-0000-000000000001")))
+        operations = Mock()
+        operations.attach_mock(db.commit, "commit")
+        operations.attach_mock(ai, "ai")
+        operations.attach_mock(plans, "create_plan")
         monkeypatch.setattr(recipe_service, "create_plan", plans)
         monkeypatch.setattr(recipe_service, "list_ingredients_by_refrigerator", ingredients)
         monkeypatch.setattr(recipe_service, "get_user_preference", preference)
         monkeypatch.setattr(recipe_service, "run_recipe_graph", ai)
         yield SimpleNamespace(
             db=db, user=session.get(User, 1), ingredients=ingredients,
-            preference=preference, ai=ai,
+            preference=preference, ai=ai, operations=operations,
         )
     engine.dispose()
 
@@ -114,7 +118,10 @@ async def test_allows_owned_and_shared_refrigerators(
     } == set(refrigerator_ids)
     recipe_context.ai.assert_awaited_once()
     assert recipe_context.ai.await_args.kwargs == {"user_id": 1, "servings": 1}
-    recipe_context.db.commit.assert_awaited_once()
+    assert recipe_context.db.commit.await_count == 2
+    assert [call[0] for call in recipe_context.operations.mock_calls] == [
+        "commit", "ai", "create_plan", "commit",
+    ]
 
 
 async def test_service_itself_rejects_non_member(recipe_context):
@@ -148,7 +155,7 @@ async def test_empty_fridge_does_not_enter_ai_or_usage_limiter(recipe_client, re
     )
     assert response.status_code == 200
     recipe_context.ai.assert_not_awaited()
-    recipe_context.db.commit.assert_not_awaited()
+    recipe_context.db.commit.assert_awaited_once()
 
 
 async def test_empty_selection_preserves_existing_response(recipe_client, recipe_context):

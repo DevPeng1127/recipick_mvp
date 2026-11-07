@@ -21,7 +21,9 @@ async def update_me(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await update_user(current_user, data, db)
+    user = await update_user(current_user, data, db)
+    await db.commit()
+    return user
 
 
 @router.get("/me/preference", response_model=UserPreferenceResponse | None)
@@ -40,4 +42,5 @@ async def update_my_preference(
     db: AsyncSession = Depends(get_db),
 ):
     preference = await upsert_user_preference(current_user.id, data, db)
+    await db.commit()
     return preference

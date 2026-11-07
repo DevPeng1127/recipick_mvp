@@ -1,0 +1,131 @@
+{
+  "date": "2026-11-07",
+  "history_id": "WRITE-COMMIT-BOUNDARIES-20261107",
+  "base_commit": "b19a2dd67c119a25cb6a15660d3c203fb7846e8a",
+  "branch": "codex/write-api-commit-boundaries",
+  "uncommitted_at_verification": true,
+  "environment": "Local loopback PostgreSQL, separate recipick_test database, per-test random schemas",
+  "changed_api_route_count": 20,
+  "business_scenario_count": 24,
+  "baseline_suite": {
+    "tests": "48",
+    "failures": "48",
+    "errors": "0",
+    "skipped": "0",
+    "time": "38.091"
+  },
+  "baseline_failure_messages": {
+    "AssertionError: Committed data must be visible before HTTP success starts.": 24,
+    "assert 201 == 500": 5,
+    "assert 200 == 500": 14,
+    "assert 204 == 500": 5
+  },
+  "targeted_regression_suite": {
+    "tests": "48",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "29.796"
+  },
+  "first_full_suite": {
+    "tests": "780",
+    "failures": "5",
+    "errors": "0",
+    "skipped": "0",
+    "time": "222.155"
+  },
+  "first_full_correction": "Five menu authorization assertions updated for the approved pre-response commit order.",
+  "full_backend_suite": {
+    "tests": "780",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "223.647"
+  },
+  "warnings": {
+    "targeted": 64,
+    "full": 285,
+    "kind": "Existing datetime.utcnow deprecation"
+  },
+  "new_regression_names": [
+    "test_write_response_reflects_final_commit[success-ingredient-create]",
+    "test_write_response_reflects_final_commit[success-ingredient-update]",
+    "test_write_response_reflects_final_commit[success-consume-partial]",
+    "test_write_response_reflects_final_commit[success-consume-full]",
+    "test_write_response_reflects_final_commit[success-dispose-partial]",
+    "test_write_response_reflects_final_commit[success-dispose-full]",
+    "test_write_response_reflects_final_commit[success-fridge-create]",
+    "test_write_response_reflects_final_commit[success-fridge-initial]",
+    "test_write_response_reflects_final_commit[success-fridge-update]",
+    "test_write_response_reflects_final_commit[success-favorite]",
+    "test_write_response_reflects_final_commit[success-box-create]",
+    "test_write_response_reflects_final_commit[success-box-update]",
+    "test_write_response_reflects_final_commit[success-invite-create]",
+    "test_write_response_reflects_final_commit[success-invite-revoke]",
+    "test_write_response_reflects_final_commit[success-invite-accept]",
+    "test_write_response_reflects_final_commit[success-member-leave]",
+    "test_write_response_reflects_final_commit[success-member-remove]",
+    "test_write_response_reflects_final_commit[success-nickname]",
+    "test_write_response_reflects_final_commit[success-preference-create]",
+    "test_write_response_reflects_final_commit[success-preference-update]",
+    "test_write_response_reflects_final_commit[success-oauth-kakao]",
+    "test_write_response_reflects_final_commit[success-oauth-google]",
+    "test_write_response_reflects_final_commit[success-menu-recommend]",
+    "test_write_response_reflects_final_commit[success-menu-repeat]",
+    "test_write_response_reflects_final_commit[commit-failure-ingredient-create]",
+    "test_write_response_reflects_final_commit[commit-failure-ingredient-update]",
+    "test_write_response_reflects_final_commit[commit-failure-consume-partial]",
+    "test_write_response_reflects_final_commit[commit-failure-consume-full]",
+    "test_write_response_reflects_final_commit[commit-failure-dispose-partial]",
+    "test_write_response_reflects_final_commit[commit-failure-dispose-full]",
+    "test_write_response_reflects_final_commit[commit-failure-fridge-create]",
+    "test_write_response_reflects_final_commit[commit-failure-fridge-initial]",
+    "test_write_response_reflects_final_commit[commit-failure-fridge-update]",
+    "test_write_response_reflects_final_commit[commit-failure-favorite]",
+    "test_write_response_reflects_final_commit[commit-failure-box-create]",
+    "test_write_response_reflects_final_commit[commit-failure-box-update]",
+    "test_write_response_reflects_final_commit[commit-failure-invite-create]",
+    "test_write_response_reflects_final_commit[commit-failure-invite-revoke]",
+    "test_write_response_reflects_final_commit[commit-failure-invite-accept]",
+    "test_write_response_reflects_final_commit[commit-failure-member-leave]",
+    "test_write_response_reflects_final_commit[commit-failure-member-remove]",
+    "test_write_response_reflects_final_commit[commit-failure-nickname]",
+    "test_write_response_reflects_final_commit[commit-failure-preference-create]",
+    "test_write_response_reflects_final_commit[commit-failure-preference-update]",
+    "test_write_response_reflects_final_commit[commit-failure-oauth-kakao]",
+    "test_write_response_reflects_final_commit[commit-failure-oauth-google]",
+    "test_write_response_reflects_final_commit[commit-failure-menu-recommend]",
+    "test_write_response_reflects_final_commit[commit-failure-menu-repeat]"
+  ],
+  "checks": [
+    "Independent DB snapshot at ASGI http.response.start equals committed post-request state.",
+    "Real deferred constraint trigger rejects final COMMIT with PostgreSQL SQLSTATE 23514.",
+    "A rejected COMMIT produces HTTP 500 and restores all nine business tables.",
+    "New OAuth access tokens reference an already committed user at HTTP response start.",
+    "Menu persistence failure preserves one finished AI usage record and performs one mock provider call.",
+    "Existing lock-order, authorization, inventory, sharing, onboarding and rate-limit regressions pass."
+  ],
+  "database_cleanup": {
+    "baseline_catalog_unchanged": true,
+    "full_suite_catalog_unchanged": true,
+    "remaining_test_connections": []
+  },
+  "production_requests": 0,
+  "external_ai_calls": 0,
+  "external_oauth_calls": 0,
+  "source_sha256": {
+    "backend/app/api/v1/auth.py": "0bd92a7ee48336252dbccf61e5dd94b9894d7e9f23098203139937a98cb0eea5",
+    "backend/app/api/v1/ingredients.py": "df3ec3df2a4ffce3e16147907f514a08ab1b1179cb3f1b6bc2d7b008b0f3954a",
+    "backend/app/api/v1/recipes.py": "61d1b5cfdffa95ce8e697d1fe4f9bd1b40f1036fef2ed545bf8c6989c760e77d",
+    "backend/app/api/v1/refrigerators.py": "8e48bbd17f13a84053625a32f60a1068a32de429d87da6de53c783f432c8881e",
+    "backend/app/api/v1/sharing.py": "e65738aa45e4b5ba834103d72a544abd3dccccd38605668a41d33ecf1f6fe5ec",
+    "backend/app/api/v1/storage_boxes.py": "b50a494815f3aad1c4d2c72b1ea3b79cf234a30f8ddef6b47ebd1552ef7388ff",
+    "backend/app/api/v1/users.py": "f715f344459206008d78ee099518f227f286f895e91df906190ef940e959bbc3",
+    "backend/tests/integration/test_write_commit_boundaries.py": "079b0b390a16e58b4940720b4f13e7db47cf2d1c481f14c3a430e5a756a57cac",
+    "backend/tests/unit/test_recipe_authorization.py": "4ca1533a1117cdcb0a05fea5770495aace7491c92839acd4c69723f7091f29af"
+  },
+  "limitations": [
+    "AI and OAuth providers use synthetic responses; production and browser behavior were not exercised.",
+    "The commit-acknowledgement loss case is outside the deferred-constraint failure test."
+  ]
+}

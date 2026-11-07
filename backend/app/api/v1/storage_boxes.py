@@ -36,7 +36,9 @@ async def create_box(
     member: RefrigeratorMember = Depends(require_refrigerator_owner),
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_storage_box(refrigerator_id, data, db)
+    box = await create_storage_box(refrigerator_id, data, db)
+    await db.commit()
+    return box
 
 
 @router.put("/reorder", status_code=status.HTTP_204_NO_CONTENT)
@@ -61,6 +63,7 @@ async def update_box(
     box = await update_storage_box(storage_box_id, refrigerator_id, data, db)
     if box is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Storage box not found")
+    await db.commit()
     return box
 
 

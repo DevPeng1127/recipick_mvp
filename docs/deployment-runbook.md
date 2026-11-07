@@ -1,6 +1,19 @@
 # Recipick 운영 배포 기록
 
-## 최신 배포 — 스마트 차감 잠금 순서 수정 (2026-11-07)
+## 최신 배포 — 나머지 쓰기 API의 성공 응답 시점 수정 (2026-11-07)
+
+**`c21bed5` 커밋·운영 배포·기본 검증·원격 푸시를 완료했다.** 브랜치 **`codex/write-api-commit-boundaries`**, 배포 이력 ID **`WRITE-COMMIT-RELEASE-20261107`**. 배포 기록은 같은 브랜치의 후속 문서 커밋에서 관리한다. 아래 이전 릴리스 문단은 각 배포 당시의 기록이다.
+
+- 사용자 결과 확인·커밋·운영 반영·원격 푸시 승인에 따라 **`c21bed5 fix: commit remaining writes before success responses`**를 배포했다. 식재료·냉장고·보관함·공유·사용자 설정·신규 소셜 가입·메뉴 저장의 20개 API가 최종 저장 완료 후 성공을 반환한다.
+- 배포 전 별도 운영 JWT 준비 원칙을 안내하고, 보관된 운영 키가 Secret Manager 활성 버전 1과 일치하며 개발 키와 분리됐음을 값 출력 없이 확인했다. 기존 비밀 참조와 1CPU/1GiB·동시성 2·120초·요청 기반 CPU·확장/ingress 설정으로 배포했다.
+- 격리 PostgreSQL 전체 백엔드 **780개 통과**에 신규 회귀 **48개**가 포함된다. 테스트 증빙의 소스 해시 9개를 다시 확인하고 같은 앱 소스로 Linux/amd64 이미지를 빌드했다. 전체 앱/requirements 해시 일치·UID 10001·개발 파일 제외, 네트워크 없는 메뉴 일관성/음료 0.25L·0.5L 재생 검증을 통과했다.
+- Cloud Run **`recipick-api-writes-c21bed5`** Ready·트래픽 **100%**, 실행 manifest **`sha256:de4ba4fcc3a242cc7c549c07aad151d6ce06c4e9a11b77a3cc7d085b968f86e4`** 일치 확인. 이미지 인덱스는 `sha256:b243884543ca5e6ff27eaadd0d044534c4deadc61fdb27b4572acce156e00a8a`다.
+- 운영 HTTPS health·미인증 거절·CORS 허용/거절·Kakao/Google 운영 콜백 설정·서명 검사와 Neon 읽기를 확인했다. 공개 HTML/JS/CSS 바이트 및 6개 SPA 경로·캐시 정책도 일치했다. Firebase Hosting은 버전 **`e0726020915cb379`**, 릴리스 **`1793678139105000`**로 서비스 중이다.
+- 확인 시점 새 리비전 ERROR 이상 로그는 **0건**이다. 운영 검증은 읽기 전용이며 실제 COMMIT 실패·성공 응답 시점·전체 롤백은 격리 DB 검증을 근거로 한다. 이번 운영 사용자 데이터 쓰기·AI 호출·소셜 재로그인·DB 마이그레이션은 0회다. 브라우저 조작 및 commit 수락 뒤 응답 유실은 별도 검증 범위다.
+- 복구가 필요하면 직전 **`recipick-api-locks-b2b5c9f`**로 트래픽을 전환할 수 있다. 기존 Hosting과 DB 스키마로 실행할 수 있으며, 복구하면 이번 20개 API의 성공 응답 시점 개선이 해제된다. 실제 롤백은 실행하지 않았다.
+- [공유 가능한 배포 증빙](evidence/write-commit-release-20261107.json)에 검증 시각·코드 해시·리비전·digest·테스트 결과·검증 한계를 기록했다. 무시된 `.deploy/`에는 `writes-release-before.json`, `writes-release-previous-hosting.json`, `writes-image-metadata.json`, `writes-linux-manifest.txt`, `writes-release-verification.json`과 릴리스별 실행 스크립트를 보관한다.
+
+## 스마트 차감 잠금 순서 수정 배포 (2026-11-07)
 
 **`b2b5c9f` 커밋·운영 배포·기본 검증·원격 푸시를 완료했다.** 브랜치 **`codex/cooking-lock-order`**, 배포 이력 ID **`COOKING-LOCK-RELEASE-20261107`**. 이번 배포 기록도 같은 브랜치에 후속 문서 커밋으로 푸시한다. 아래 11-04 이전 문단은 당시 배포 이력이다.
 
@@ -64,8 +77,8 @@
 - 웹: **https://recipick-prod-1127.web.app**
 - API: **https://recipick-api-inadpqyfnq-as.a.run.app**, API 경로 `/api/v1`, 상태 확인 `/health`.
 - Google 프로젝트: `recipick-prod-1127` (`Recipick Production`), 번호 `306978637426`.
-- Cloud Run은 Singapore의 `recipick-api`이며 현재 리비전은 **`recipick-api-locks-b2b5c9f`**(트래픽 100%)다. 직전 리비전은 `recipick-api-onboard-de2e409`, 최초 리비전은 `recipick-api-00001-ntg`다.
-- 컨테이너는 `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:locks-b2b5c9f`, 실행 manifest digest는 **`sha256:7f5b9c4452f8819959690104927132cf654d65931d04fca9588db38e78ea6468`**다.
+- Cloud Run은 Singapore의 `recipick-api`이며 현재 리비전은 **`recipick-api-writes-c21bed5`**(트래픽 100%)다. 직전 리비전은 `recipick-api-locks-b2b5c9f`, 최초 리비전은 `recipick-api-00001-ntg`다.
+- 컨테이너는 `asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api:writes-c21bed5`, 실행 manifest digest는 **`sha256:de4ba4fcc3a242cc7c549c07aad151d6ce06c4e9a11b77a3cc7d085b968f86e4`**다.
 - Hosting 버전: **`sites/recipick-prod-1127/versions/e0726020915cb379`**, 릴리스 **`1793678139105000`**. 공개 JS `index-CCRzaGyW.js`, CSS `index-BA0K98cz.css`.
 - 월 예산: **5,000 KRW**, 해당 Google 프로젝트만, 50%·90%·100% 실제 지출 알림. 기본 결제 관리자/사용자 알림 수신 유지. **자동 차단/청구 상한이 아니다.**
 - 기존 AI/OAuth용 Google 프로젝트 `resolute-vault-478108-h0`는 결제 비활성 상태를 읽기 전용으로 확인했다. 호스팅용 새 프로젝트의 결제 연결과 분리되어 있다. AI Studio 모델 한도 자체의 실시간 확인과는 다르다.

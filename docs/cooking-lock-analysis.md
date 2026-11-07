@@ -25,7 +25,7 @@
 
 이번 응답 경계 변경은 위 엔드포인트에 적용했다. 그 밖의 쓰기 API가 요청 종료 의존성에서 commit하는 경우의 전수 점검은 별도 후속 범위로 기록한다. 자동 교착상태 재시도는 이번 구현에 포함하지 않았다.
 
-후속 **`WRITE-COMMIT-BOUNDARIES-20261107`**에서 사용자 승인을 받아 남은 20개 쓰기 API의 commit 완료 후 성공 응답을 보완했다. 실제 PostgreSQL 최종 저장 실패와 응답 시작 시점의 DB 조회를 검증하며, 최신 구현·검증·커밋·배포 상태는 [인계 기록](code-audit-and-repair-log.md)을 따른다.
+후속 **`WRITE-COMMIT-BOUNDARIES-20261107`**에서 사용자 승인을 받아 남은 20개 쓰기 API의 commit 완료 후 성공 응답을 보완했다. 실제 PostgreSQL 최종 저장 실패와 응답 시작 시점의 DB 조회를 포함한 전체 백엔드 780개를 통과했다. 사용자 결과 확인 후 **`c21bed5`**로 커밋·원격 푸시하고 **`recipick-api-writes-c21bed5`**에 운영 반영·읽기 전용 검증을 완료했다. 배포 이력 **`WRITE-COMMIT-RELEASE-20261107`**의 상세는 [인계 기록](code-audit-and-repair-log.md)과 [운영 배포 기록](deployment-runbook.md)을 따른다.
 
 ### 회귀 검증
 

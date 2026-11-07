@@ -4,6 +4,8 @@
   "base_commit": "b19a2dd67c119a25cb6a15660d3c203fb7846e8a",
   "branch": "codex/write-api-commit-boundaries",
   "uncommitted_at_verification": true,
+  "implementation_commit": "c21bed599e55905991f76a261a76d1b5cf293726",
+  "release_evidence": "write-commit-release-20261107.json",
   "environment": "Local loopback PostgreSQL, separate recipick_test database, per-test random schemas",
   "changed_api_route_count": 20,
   "business_scenario_count": 24,

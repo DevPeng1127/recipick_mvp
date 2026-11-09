@@ -1,0 +1,136 @@
+{
+  "date": "2026-11-07",
+  "history_id": "UTC-TIMESTAMPS-20261107",
+  "base_commit": "64e3dfb13127ed79fda93975107d0343c021c9fc",
+  "branch": "codex/utc-timestamp-warnings",
+  "status": "locally verified, user approved commit and deployment on 2026-11-09",
+  "python_version": "3.12.12",
+  "implementation": {
+    "models": [
+      "User",
+      "Refrigerator",
+      "IngredientLog"
+    ],
+    "default": "lambda: datetime.now(timezone.utc).replace(tzinfo=None)",
+    "storage": "naive UTC in timestamp without time zone",
+    "migration_required": false
+  },
+  "new_backend_regressions": 25,
+  "new_frontend_regressions": 6,
+  "baseline": {
+    "report": "before.xml",
+    "tests": 6,
+    "failures": 6,
+    "errors": 0,
+    "skipped": 0,
+    "junit_suite_seconds": 1.294
+  },
+  "focused_backend": {
+    "report": "focused.xml",
+    "tests": 59,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_suite_seconds": 22.726
+  },
+  "full_backend": {
+    "report": "backend-results.xml",
+    "tests": 805,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_suite_seconds": 217.213
+  },
+  "frontend_utc": {
+    "report": "frontend-utc.xml",
+    "tests": 18,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_suite_seconds": 7.501
+  },
+  "frontend_los_angeles": {
+    "report": "frontend-los-angeles.xml",
+    "tests": 18,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_suite_seconds": 6.796
+  },
+  "frontend_first_full": {
+    "report": "frontend-first-full.xml",
+    "tests": 198,
+    "failures": 4,
+    "errors": 0,
+    "skipped": 0,
+    "junit_suite_seconds": 166.438
+  },
+  "frontend_final_full": {
+    "report": "frontend-results.xml",
+    "tests": 198,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_suite_seconds": 55.888
+  },
+  "verification_conditions": {
+    "backend_warning_policy": "-W error::DeprecationWarning",
+    "backend_observed_warnings": 0,
+    "previous_full_backend_utc_warnings": 285,
+    "database": "loopback PostgreSQL, separate recipick_test DB, per-test random schema",
+    "db_write_timezone": "Asia/Seoul",
+    "db_read_timezone": "America/Los_Angeles",
+    "frontend": "Vitest + jsdom, mocked activity API, real MyPage rendering and Intl formatter",
+    "frontend_final_timezone": "Asia/Seoul",
+    "frontend_final_max_workers": 2,
+    "frontend_timeout_ms": 5000
+  },
+  "coverage": [
+    "All three defaults are evaluated per insert using the UTC clock without deprecation warnings.",
+    "Fresh and explicit historical naive UTC values round-trip through PostgreSQL across session timezones.",
+    "Month/year midnight boundaries and leap day, with 7/30/90-day periods.",
+    "Existing logs and a new log created by the real consume API appear together.",
+    "Exact period start and query instant included, one microsecond before/after excluded.",
+    "All/consumed/disposed filters agree across summary, daily counts, ranking and list.",
+    "Activity API marks UTC with Z and MyPage renders Korean time across device timezones.",
+    "Full backend includes cooking locks and write commit boundary regressions."
+  ],
+  "execution_notes": [
+    "Baseline six failures include three deprecation errors and three clock contract assertions.",
+    "First sandboxed frontend attempt stopped before test execution with temporary-file EPERM; rerun with approved execution permissions.",
+    "Default-concurrency full frontend run had four existing UI tests exceed 5000ms; rerun with maxWorkers=2 and the same timeout."
+  ],
+  "external_ai_calls": 0,
+  "production_access": false,
+  "validation_limits": [
+    "Browser and production UI interactions were outside this local automated validation."
+  ],
+  "lint_exit_code": 0,
+  "build_exit_code": 0,
+  "artifact_directory": "C:/Users/pengveloper/.codex/visualizations/2026/10/23/01a16717-7b50-7211-8e19-054d43dd6b76/utc-timestamps-20261107",
+  "sha256_normalized_lf": {
+    "backend/app/models/user.py": "378e998f455058237e37edad63f170deb85b967a7c9a426356af7187ba204534",
+    "backend/app/models/refrigerator.py": "595308d718d7952333e0c22d7360d44664efb2cb45f716b236f639d57c86c837",
+    "backend/app/models/ingredient_log.py": "c16e42881b3ea16c4d1c0ce5ffc5c51b989c8b47f84afe031c4bb0f8fbf62048",
+    "backend/app/services/activity_service.py": "415884b2774e6b94fff271533753ba17f3528f94f78d35c30afdf664f758a3fc",
+    "backend/tests/unit/test_timestamp_defaults.py": "dc2ae496cd2b049c6c146838682d8e382ed043161aacd69f841cf7403d668c71",
+    "backend/tests/integration/test_utc_timestamps.py": "f504e9d17f1d98c2aaf3c4a91fc8d7516f6bf4c25b5ec72c9b969e0266bc51b6",
+    "backend/tests/integration/test_activity.py": "0fdde9e5365eef67f236db46842d40df14a429b37489558170baeacc753f90cd",
+    "frontend/src/pages/MyPage.tsx": "112c886aea8914910342b76c206f99e21cd6e10bdb4749ea44ae814cb60ab918",
+    "frontend/src/__tests__/MyPage.test.tsx": "3c07e609616d6bc5cb89695f7a79abb5f6dbf82c1b3fd76fa2f2a0c1cea6376d"
+  },
+  "database_cleanup": {
+    "before-cleanup.json": {
+      "catalog_unchanged": true,
+      "remaining_test_connections": 0
+    },
+    "focused-cleanup.json": {
+      "catalog_unchanged": true,
+      "remaining_test_connections": 0
+    },
+    "cleanup.json": {
+      "catalog_unchanged": true,
+      "remaining_test_connections": 0
+    }
+  }
+}

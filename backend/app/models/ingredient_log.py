@@ -1,5 +1,5 @@
 import enum
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -31,7 +31,10 @@ class IngredientLog(Base):
     expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     expiry_source: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown", server_default="unknown")
     memo: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Existing timestamp columns store UTC without timezone metadata.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     __table_args__ = (
         Index("ix_ingredient_logs_user_id", "user_id"),

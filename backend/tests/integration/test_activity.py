@@ -1,10 +1,12 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
+from unittest.mock import Mock
 
 import pytest
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ingredient_log import ActionType, IngredientLog
+from app.models import ingredient_log
 from app.models.refrigerator import Refrigerator, RefrigeratorMember
 from app.services import activity_service
 from tests.integration.test_consume_dispose import (
@@ -200,3 +202,75 @@ async def test_completed_smart_deduction_is_visible_as_consumption(transactional
     assert saved['action_type'] == 'CONSUMED' and saved['quantity'] == .25 and saved['unit'] == 'kg'
     assert '당근 요리 (1인분)' in saved['memo'] and data['counts']['consumed'] == 1
     assert len(ai) == 1  # Dashboard does not make another AI request.
+
+
+@pytest.mark.parametrize('days', [7, 30, 90])
+@pytest.mark.parametrize('instant,korean_date', [
+    ('2026-01-31T14:59:59.999999+00:00', '2026-01-31'),
+    ('2026-01-31T15:00:00+00:00', '2026-02-01'),
+    ('2026-12-31T14:59:59.999999+00:00', '2026-12-31'),
+    ('2026-12-31T15:00:00+00:00', '2027-01-01'),
+    ('2028-02-28T15:00:00+00:00', '2028-02-29'),
+    ('2028-02-29T15:00:00+00:00', '2028-03-01'),
+], ids=['month-end', 'month-start', 'year-end', 'year-start', 'leap-day', 'after-leap-day'])
+async def test_new_and_existing_logs_follow_korean_period_boundaries(
+    transactional_client, inventory_sessions, monkeypatch, days, instant, korean_date,
+):
+    now = datetime.fromisoformat(instant)
+    end_date = datetime.fromisoformat(korean_date).date()
+    start_date = end_date - timedelta(days=days - 1)
+    # Build expected boundaries independently from activity_service.period().
+    today_utc = datetime.combine(end_date, time.min) - timedelta(hours=9)
+    start_utc = datetime.combine(start_date, time.min) - timedelta(hours=9)
+    clock = Mock(wraps=datetime)
+    clock.now.return_value = now
+    monkeypatch.setattr(ingredient_log, 'datetime', clock)
+    monkeypatch.setattr(activity_service, 'utc_now', lambda: now)
+    async with inventory_sessions.begin() as db:
+        await db.execute(delete(IngredientLog))
+        db.add_all([
+            log('기간 직전', at=start_utc - timedelta(microseconds=1)),
+            log('기간 시작', at=start_utc),
+            log('전날 끝', at=today_utc - timedelta(microseconds=1), action=ActionType.DISPOSED),
+            log('오늘 시작', at=today_utc),
+            log('조회 시각 이후', at=now.replace(tzinfo=None) + timedelta(microseconds=1)),
+        ])
+
+    # Exercise the new timestamp default through the real consumption API.
+    saved = await transactional_client.post(
+        '/api/v1/storage-boxes/100/ingredients/1000/consume', headers=auth_headers(1),
+        json={'quantity': 0.25},
+    )
+    assert saved.status_code == 200, saved.text
+    clock.now.assert_called_once_with(timezone.utc)
+
+    expected = {'기간 시작': ActionType.CONSUMED, '오늘 시작': ActionType.CONSUMED,
+                '당근': ActionType.CONSUMED, '전날 끝': ActionType.DISPOSED}
+    for action in (None, ActionType.CONSUMED, ActionType.DISPOSED):
+        params = {'days': days}
+        if action:
+            params['action_type'] = action.value
+        response = await request(transactional_client, **params)
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data['start_date'] == start_date.isoformat()
+        assert data['end_date'] == korean_date
+        assert datetime.fromisoformat(data['as_of'].replace('Z', '+00:00')) == now
+        assert len(data['daily']) == days
+        assert data['daily'][0]['date'] == start_date.isoformat()
+        assert data['daily'][-1]['date'] == korean_date
+        names = {name for name, kind in expected.items() if action is None or kind == action}
+        assert {item['ingredient_name'] for item in data['items']} == names
+        consumed = 0 if action == ActionType.DISPOSED else 3
+        disposed = 0 if action == ActionType.CONSUMED else 1
+        assert data['counts'] == dict(consumed=consumed, disposed=disposed, total=len(names))
+        assert sum(day['consumed'] for day in data['daily']) == consumed
+        assert sum(day['disposed'] for day in data['daily']) == disposed
+        assert data['daily'][0]['consumed'] == (1 if consumed else 0)
+        assert data['daily'][-2]['disposed'] == disposed
+        assert data['daily'][-1] == dict(date=korean_date, consumed=2 if consumed else 0, disposed=0)
+        assert data['frequent_disposals'] == ([{'name': '전날 끝', 'count': 1}] if disposed else [])
+        if consumed:
+            fresh = next(item for item in data['items'] if item['ingredient_name'] == '당근')
+            assert fresh['created_at'].endswith('Z')
+            assert datetime.fromisoformat(fresh['created_at'].replace('Z', '+00:00')) == now

@@ -1,5 +1,5 @@
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -21,7 +21,10 @@ class User(Base):
     oauth_provider: Mapped[str] = mapped_column(String(20), nullable=False)
     oauth_id: Mapped[str] = mapped_column(String(100), nullable=False)
     nickname: Mapped[str] = mapped_column(String(50), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Existing timestamp columns store UTC without timezone metadata.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     preference: Mapped["UserPreference | None"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"

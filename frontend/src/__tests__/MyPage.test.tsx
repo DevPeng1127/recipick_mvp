@@ -63,6 +63,28 @@ it('shows exact daily values and history memos through accessible details', asyn
   expect(screen.getByText('확인 메모')).toBeVisible()
 })
 
+it.each([
+  ['2026-01-31T14:59:59.999999Z', '2026-01-31', '2026. 1. 31. 오후 11:59'],
+  ['2026-01-31T15:00:00Z', '2026-02-01', '2026. 2. 1. 오전 12:00'],
+  ['2026-12-31T14:59:59.999999Z', '2026-12-31', '2026. 12. 31. 오후 11:59'],
+  ['2026-12-31T15:00:00Z', '2027-01-01', '2027. 1. 1. 오전 12:00'],
+  ['2028-02-28T15:00:00Z', '2028-02-29', '2028. 2. 29. 오전 12:00'],
+  ['2028-02-29T15:00:00Z', '2028-03-01', '2028. 3. 1. 오전 12:00'],
+])('renders UTC %s as Korean time in both history and the snapshot heading', async (instant, koreanDate, displayed) => {
+  const startDate = new Date(Date.parse(koreanDate) - 29 * 86_400_000).toISOString().slice(0, 10)
+  vi.mocked(api.getActivity).mockResolvedValue(response({
+    as_of: instant, start_date: startDate, end_date: koreanDate,
+    items: [{ ...response().items[0], created_at: instant }],
+  }))
+  mount()
+  await ready()
+  const list = screen.getByRole('region', { name: '상세 이력' })
+  const timestamp = within(list).getByText(displayed, { selector: 'time' })
+  expect(timestamp).toBeVisible()
+  expect(timestamp).toHaveAttribute('datetime', instant)
+  expect(screen.getByText(`${startDate} ~ ${koreanDate} · 한국 시간 · ${displayed} 조회 기준`)).toBeVisible()
+})
+
 it('changes period, family scope, and action filters without merging data', async () => {
   mount(); await ready()
   const user = userEvent.setup()

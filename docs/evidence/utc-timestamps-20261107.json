@@ -3,7 +3,9 @@
   "history_id": "UTC-TIMESTAMPS-20261107",
   "base_commit": "64e3dfb13127ed79fda93975107d0343c021c9fc",
   "branch": "codex/utc-timestamp-warnings",
-  "status": "locally verified, user approved commit and deployment on 2026-11-09",
+  "status": "committed, deployed and pushed after user approval on 2026-11-09",
+  "implementation_commit": "f8fd25a63d4e6fd603d48950579f3733072df95c",
+  "release_evidence": "utc-release-20261109.json",
   "python_version": "3.12.12",
   "implementation": {
     "models": [

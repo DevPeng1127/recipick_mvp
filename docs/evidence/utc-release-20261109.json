@@ -1,0 +1,73 @@
+{
+  "history_id": "UTC-RELEASE-20261109",
+  "release_date_kst": "2026-11-09",
+  "verified_at_utc": "2026-11-09T00:29:15.807863+00:00",
+  "implementation_commit": "f8fd25a63d4e6fd603d48950579f3733072df95c",
+  "branch": "codex/utc-timestamp-warnings",
+  "previous_revision": "recipick-api-writes-c21bed5",
+  "revision": "recipick-api-utc-f8fd25a",
+  "image_digest": "asia-southeast1-docker.pkg.dev/recipick-prod-1127/recipick/api@sha256:2132cbbd4128fe362d95c16dd290a431f116c8425e28a9b037c34836448fdd28",
+  "hosting_release": "sites/recipick-prod-1127/releases/1793678139105000",
+  "hosting_version": "sites/recipick-prod-1127/versions/e0726020915cb379",
+  "live_assets": [
+    {
+      "name": "index-BA0K98cz.css",
+      "sha256": "4d5d6f7c80c9d6552399f121444650c8f6ce813f5c78b5b67dc4353e9b6f5e8a"
+    },
+    {
+      "name": "index-CCRzaGyW.js",
+      "sha256": "f26cc59824e022fb80219022a017baa61fd7f8555cc66c187ad35f8c419530d0"
+    }
+  ],
+  "spa_routes_and_cache_headers": "passed",
+  "image_index_digest": "sha256:6c0f7ff56e6f3a86badfee8c01445c54548bb75dc521031fe536836f7e09f8ee",
+  "traffic_percent": 100,
+  "production_jwt_separate_and_enabled": true,
+  "secret_references_preserved": true,
+  "runtime_spec_preserved_except_image": true,
+  "scaling_ingress_cpu_annotations_preserved": true,
+  "runtime_resources": {
+    "cpu": "1",
+    "memory": "1Gi"
+  },
+  "concurrency": 2,
+  "timeout_seconds": 120,
+  "checks": {
+    "image_app_and_requirements_source_hashes": "passed",
+    "tested_source_hashes_normalized_lf": "passed",
+    "three_utc_timestamp_defaults_in_linux_image": "passed without deprecation warnings",
+    "container_nonroot_and_development_files_excluded": "passed",
+    "offline_menu_consistency_and_beverage_samples": "passed",
+    "https_health_and_unauthenticated_rejection": "passed",
+    "cors_allow_and_deny": "passed",
+    "oauth_callback_configuration": "passed",
+    "production_signature_and_neon_read": "passed",
+    "existing_hosting_release_and_live_asset_hashes": "passed",
+    "new_revision_error_log_entries_at_verification": 0
+  },
+  "predeployment_backend_suite": {
+    "report": "backend-results.xml",
+    "tests": 805,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_suite_seconds": 217.213
+  },
+  "predeployment_frontend_suite": {
+    "report": "frontend-results.xml",
+    "tests": 198,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_suite_seconds": 55.888
+  },
+  "predeployment_backend_deprecation_warnings": 0,
+  "production_inventory_mutations": 0,
+  "external_ai_calls": 0,
+  "local_execution_note": "Windows blocked the venv Python launcher. Existing Miniforge Python 3.12.12 and venv libraries executed deployment helpers successfully.",
+  "limitations": [
+    "Database round-trips and Korean date boundaries verified on isolated local PostgreSQL. Production verification used read-only requests.",
+    "Frontend Korean time rendering verified with Vitest/jsdom and mocked API responses. Production public files and SPA routes checked over HTTPS.",
+    "Fresh social login and browser/mobile interactions were outside this release verification."
+  ]
+}

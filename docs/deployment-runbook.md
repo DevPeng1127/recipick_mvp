@@ -1,6 +1,22 @@
 # Recipick 운영 배포 기록
 
-## 최신 배포 — 나머지 쓰기 API의 성공 응답 시점 수정 (2026-11-07)
+## 최신 배포 — UTC 시간 생성 경고 수정 (2026-11-09)
+
+**`f8fd25a` 커밋·운영 배포·기본 검증·원격 푸시를 완료했다.** 브랜치 **`codex/utc-timestamp-warnings`**, 배포 이력 ID **`UTC-RELEASE-20261109`**. 배포 결과는 같은 브랜치의 후속 문서 커밋에서 관리한다. 아래 이전 배포 문단은 당시 기록이다.
+
+- 사용자 승인에 따라 시간 생성 코드 3곳과 회귀 테스트·기록을 배포했다. 운영 JWT가 개발 키와 분리되고 Secret Manager 버전 1에 활성 설정된 것을 값 출력 없이 확인했다. 기존 비밀 참조와 1CPU/1GiB·동시성 2·120초·요청 기반 CPU·확장/ingress 설정으로 배포했다.
+- 앞선 전체 백엔드 **805개·프런트 198개 통과, UTC 경고 0건**의 소스 해시 9개를 대조했다. Linux/amd64 이미지의 전체 앱/requirements 해시와 비루트 UID 10001을 확인했다. 네트워크 없는 이미지에서 세 UTC 기본값을 경고 오류 처리 상태로 실행했고 기존 메뉴·음료 표본도 통과했다.
+- Cloud Run **`recipick-api-utc-f8fd25a`** Ready·트래픽 **100%**, 실행 manifest **`sha256:2132cbbd4128fe362d95c16dd290a431f116c8425e28a9b037c34836448fdd28`** 일치 확인. 이미지 인덱스는 `sha256:6c0f7ff56e6f3a86badfee8c01445c54548bb75dc521031fe536836f7e09f8ee`다.
+- 운영 HTTPS health·미인증 거절·CORS·Google/Kakao 콜백 설정·운영 서명/Neon 읽기·공개 HTML/JS/CSS·6개 SPA 경로·캐시 정책을 확인했다. Firebase Hosting은 버전 **`e0726020915cb379`**, 릴리스 **`1793678139105000`**로 서비스 중이다. 한국 시간 2026-11-09 09시 29분 확인 시점의 새 리비전 ERROR 이상 로그는 **0건**이다.
+- 운영 검증은 읽기 전용 요청으로 수행했다. DB 시간 저장·날짜 경계·기간 조회는 격리 PostgreSQL, 한국 시간 화면 표시는 Vitest/jsdom 회귀 결과를 근거로 한다. 이번 운영 재고 변경·외부 AI 호출은 **0회**다. 실제 소셜 재로그인·브라우저/모바일 조작은 별도 검증 범위다.
+- 복구가 필요하면 직전 **`recipick-api-writes-c21bed5`**로 트래픽을 전환할 수 있다. 직전 버전은 동일한 UTC DB 저장 형식으로 실행되며, 복구 시 폐기 예정 경고를 생성하던 기본값으로 돌아간다.
+- [배포 증빙](evidence/utc-release-20261109.json)에 검증 시각·코드 해시·리비전·digest·테스트 결과·한계를 기록했다. 무시된 `.deploy/`에 `utc-release-before.json`, `utc-release-previous-hosting.json`, `utc-image-metadata.json`, `utc-linux-manifest.txt`, `utc-release-verification.json`과 릴리스 실행 스크립트를 보관한다.
+
+### 로컬 배포 Python 실행 환경
+
+2026-11-09 Windows 애플리케이션 제어가 `backend/.venv/Scripts/python.exe` 실행을 차단했다. 기존 `C:/ProgramData/miniforge3/python.exe`는 같은 Python 3.12.12로 정상 실행되어 `.deploy/run_with_base_python.py`에서 가상환경의 기존 라이브러리 경로를 연결해 사용했다. `.deploy/cloud_common.py`의 `CLOUDSDK_PYTHON`도 실행 중인 `sys.executable`을 사용하도록 조정했다. 이 환경으로 클라우드 사전 확인·이미지 검사/업로드·배포·사후 검증을 완료했다. 가상환경 실행 파일 차단은 로컬 환경의 잔여 사항으로 기록한다.
+
+## 나머지 쓰기 API의 성공 응답 시점 수정 (2026-11-07)
 
 **`c21bed5` 커밋·운영 배포·기본 검증·원격 푸시를 완료했다.** 브랜치 **`codex/write-api-commit-boundaries`**, 배포 이력 ID **`WRITE-COMMIT-RELEASE-20261107`**. 배포 기록은 같은 브랜치의 후속 문서 커밋에서 관리한다. 아래 이전 릴리스 문단은 각 배포 당시의 기록이다.
 
